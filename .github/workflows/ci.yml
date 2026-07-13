@@ -1,0 +1,53 @@
+name: Package CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+          - "3.14"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: Build distributions
+        run: uv build
+      - name: Check package metadata
+        run: uvx --from twine==6.2.0 twine check dist/*
+      - name: Install and import wheel
+        run: |
+          uv venv --python "${{ matrix.python-version }}" .smoke-venv
+          uv pip install --python .smoke-venv/bin/python dist/*.whl
+          .smoke-venv/bin/python - <<'PY'
+          from importlib.metadata import version
+          import tomllib
+
+          from machgen.client import MachGenClient, TaskInput
+
+          with open("pyproject.toml", "rb") as pyproject:
+              expected_version = tomllib.load(pyproject)["project"]["version"]
+
+          assert version("machgen-client") == expected_version
+          assert MachGenClient.__name__ == "MachGenClient"
+          assert TaskInput.__name__ == "TaskInput"
+          PY

@@ -152,6 +152,13 @@ class TaskInput(BaseModel):
     model_config = _WIRE_MODEL_CONFIG
 
     prompt: str = Field(description="Text prompt driving generation.")
+    enhance_prompt: bool = Field(
+        default=False,
+        description=(
+            "Whether LTX-2.3 Pro should expand the prompt with its native "
+            "Gemma prompt enhancer before generation."
+        ),
+    )
     multi_prompt: list[str] | None = Field(
         default=None,
         description=(

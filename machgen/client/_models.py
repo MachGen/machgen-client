@@ -128,6 +128,17 @@ class TaskStatusResponse(GenerateResponse):
         default=None,
         description="Structured moderation verdict when the task failed or was blocked by moderation.",
     )
+    execution_provider: str | None = Field(
+        default=None,
+        description="Actual provider of the terminal execution trial.",
+    )
+    overflow_converted: bool = Field(
+        default=False,
+        description=(
+            "Whether long queuing moved this task off self-hosted capacity to "
+            "an on-demand provider. Readable before the task finishes."
+        ),
+    )
 
 
 class UploadResponse(BaseModel):

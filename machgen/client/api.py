@@ -155,8 +155,8 @@ class TaskInput(BaseModel):
     enhance_prompt: bool = Field(
         default=False,
         description=(
-            "Whether LTX-2.3 Pro should expand the prompt with its native "
-            "Gemma prompt enhancer before generation."
+            "Whether prompt enhancement should be enabled. "
+            "Enabling this would slow down generation. "
         ),
     )
     multi_prompt: list[str] | None = Field(
@@ -171,14 +171,7 @@ class TaskInput(BaseModel):
     task_type: str = Field(description="one of T2I, I2I, T2V, I2V, R2V")
     moderate: bool = Field(
         default=True,
-        description=(
-            "Whether this request is screened by content moderation (the prompt "
-            "and any reference images, plus the generated image). Defaults to "
-            "true and most callers should leave it so. Setting it false is a "
-            "privileged option: it is honored only for accounts explicitly "
-            "allowlisted to bypass moderation; from any other account the "
-            "request is rejected with HTTP 403."
-        ),
+        description="Whether this request is screened by content moderation.",
     )
     video_config: VideoConfig | None = Field(
         default=None, description="Required for video task types."

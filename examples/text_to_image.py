@@ -24,9 +24,11 @@ def run(client: MachGenClient) -> str:
     handle = client.submit_task(task)
 
     result = client.get_task_state(handle)
-    while result.status != TaskStatus.COMPLETED:
+    while result.status not in (TaskStatus.COMPLETED, TaskStatus.FAILED):
         time.sleep(2)
         result = client.get_task_state(handle)
+    if result.status == TaskStatus.FAILED:
+        raise RuntimeError(f"Generation failed: {result.error_msg}")
 
     # task_output maps each output kind to its download locator; a T2I task
     # yields a single image. Use client.download_asset(handle.task_id) for bytes.

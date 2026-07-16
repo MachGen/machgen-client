@@ -31,9 +31,11 @@ def run(client: MachGenClient) -> str:
     handle = client.submit_task(task)
 
     result = client.get_task_state(handle)
-    while result.status != TaskStatus.COMPLETED:
+    while result.status not in (TaskStatus.COMPLETED, TaskStatus.FAILED):
         time.sleep(2)
         result = client.get_task_state(handle)
+    if result.status == TaskStatus.FAILED:
+        raise RuntimeError(f"Generation failed: {result.error_msg}")
 
     assert result.task_output is not None
     return result.task_output[TaskOutputType.IMAGE]

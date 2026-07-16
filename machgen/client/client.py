@@ -101,7 +101,7 @@ class MachGenClient:
     ```
     task = TaskInput(
         prompt="A quick brown fox jumps over the lazy dog.",
-        model="Wan2.2-T2V-A14B",
+        model="Wan2.2-A14B",
         task_type="T2V",
         video_config=VideoConfig(
             fps=16,

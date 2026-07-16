@@ -27,7 +27,7 @@ class VideoConfig(BaseModel):
     )
     height: int | None = Field(
         default=None,
-        description="Output height in pixels",
+        description="Output height in pixels. Required for generation (a missing height is rejected at submit).",
     )
     width: int | None = Field(
         default=None,
@@ -55,7 +55,7 @@ class VideoConfig(BaseModel):
         default=None,
         description=(
             "Whether the video should include audio. "
-            "**Note:** some models do no support audio, "
+            "**Note:** some models do not support audio, "
             "or the audio is always on (e.g. Veo 3.1). "
             "In those cases this field has no effect."
         ),
@@ -88,7 +88,7 @@ class ImageConfig(BaseModel):
 
     height: int | None = Field(
         default=None,
-        description="Output height in pixels",
+        description="Output height in pixels. Required for generation (a missing height is rejected at submit).",
     )
     width: int | None = Field(
         default=None,
@@ -167,7 +167,7 @@ class TaskInput(BaseModel):
             "**This is only supported/needed for Kling-v3 R2V.**"
         ),
     )
-    model: str = Field(description="Model id, e.g. 'Wan2.2-T2V-A14B', 'Kling-v3'.")
+    model: str = Field(description="Model id, e.g. 'Wan2.2-A14B', 'Kling-v3'.")
     task_type: str = Field(description="one of T2I, I2I, T2V, I2V, R2V")
     moderate: bool = Field(
         default=True,
@@ -187,8 +187,8 @@ class TaskInput(BaseModel):
         default=None,
         description=(
             "Source / reference image URLs. "
-            "Only needed for tasks that require input images like I2I, I2V, R2V "
-            "Refer to the API docs for concrete examples how to use this and what inputs are allowed. "
+            "Only needed for tasks that require input images like I2I, I2V, R2V. "
+            "Refer to the API docs for concrete examples of how to use this and what inputs are allowed. "
             "For image to video tasks, this can optionally specify 1 (first frame) or 2 (first & last frames) input images. "
         ),
     )

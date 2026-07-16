@@ -29,15 +29,17 @@ def run(client: MachGenClient) -> str:
             "https://example.com/bob.png",
         ],
         subject_to_image_ids={"alice": [0, 1], "bob": [2]},
-        video_config=VideoConfig(duration_secs=5, aspect_ratio="16:9"),
+        video_config=VideoConfig(duration_secs=5, height=720, aspect_ratio="16:9"),
     )
 
     handle = client.submit_task(task)
 
     result = client.get_task_state(handle)
-    while result.status != TaskStatus.COMPLETED:
+    while result.status not in (TaskStatus.COMPLETED, TaskStatus.FAILED):
         time.sleep(2)
         result = client.get_task_state(handle)
+    if result.status == TaskStatus.FAILED:
+        raise RuntimeError(f"Generation failed: {result.error_msg}")
 
     assert result.task_output is not None
     return result.task_output[TaskOutputType.VIDEO]

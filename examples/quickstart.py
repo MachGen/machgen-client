@@ -16,7 +16,7 @@ from machgen.client import MachGenClient, TaskInput, TaskStatus, VideoConfig
 def run(client: MachGenClient) -> bytes:
     task = TaskInput(
         prompt="A red panda exploring a misty forest at dawn",
-        model="Wan2.2-T2V-A14B",
+        model="Wan2.2-A14B",
         task_type="T2V",
         video_config=VideoConfig(
             duration_secs=5,
@@ -30,9 +30,11 @@ def run(client: MachGenClient) -> bytes:
 
     # Poll until the task reaches a terminal status.
     result = client.get_task_state(handle)
-    while result.status != TaskStatus.COMPLETED:
+    while result.status not in (TaskStatus.COMPLETED, TaskStatus.FAILED):
         time.sleep(2)
         result = client.get_task_state(handle)
+    if result.status == TaskStatus.FAILED:
+        raise RuntimeError(f"Generation failed: {result.error_msg}")
 
     return client.download_asset(handle.task_id)
 

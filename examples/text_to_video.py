@@ -16,7 +16,7 @@ from machgen.client import (
 def run(client: MachGenClient) -> str:
     task = TaskInput(
         prompt="A red panda exploring a misty forest at dawn",
-        model="Wan2.2-T2V-A14B",
+        model="Wan2.2-A14B",
         task_type="T2V",
         video_config=VideoConfig(
             duration_secs=5,
@@ -29,9 +29,11 @@ def run(client: MachGenClient) -> str:
     handle = client.submit_task(task)
 
     result = client.get_task_state(handle)
-    while result.status != TaskStatus.COMPLETED:
+    while result.status not in (TaskStatus.COMPLETED, TaskStatus.FAILED):
         time.sleep(2)
         result = client.get_task_state(handle)
+    if result.status == TaskStatus.FAILED:
+        raise RuntimeError(f"Generation failed: {result.error_msg}")
 
     assert result.task_output is not None
     return result.task_output[TaskOutputType.VIDEO]

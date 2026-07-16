@@ -31,7 +31,7 @@ with MachGenClient() as client:
     handle = client.submit_task(
         TaskInput(
             prompt="...",
-            model="Wan2.2-T2V-A14B",
+            model="Wan2.2-A14B",
             task_type="T2V",
             video_config=VideoConfig(duration_secs=5, height=720, width=1280, fps=16),
         )

@@ -152,11 +152,13 @@ class TaskInput(BaseModel):
     model_config = _WIRE_MODEL_CONFIG
 
     prompt: str = Field(description="Text prompt driving generation.")
-    enhance_prompt: bool = Field(
-        default=False,
+    enhance_prompt: bool | None = Field(
+        default=None,
         description=(
             "Whether prompt enhancement should be enabled. "
-            "Enabling this would slow down generation. "
+            "Enabling this would slow down generation but would improve quality. "
+            "By default, if this is not explicitly set we will let the model determine the default behavior. "
+            "Users can still explicitly force it to enable/disable by setting this field based on the requirement."
         ),
     )
     multi_prompt: list[str] | None = Field(

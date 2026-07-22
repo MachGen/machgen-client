@@ -42,6 +42,13 @@ class VideoConfig(BaseModel):
             "rounded up to the nearest integer. "
         ),
     )
+    bitrate_mode: str | None = Field(
+        default=None,
+        description=(
+            "Encode quality for the delivered video: 'standard' or 'high'. "
+            "**Only supported for Seedance-2.0.** Omitted -> the vendor default."
+        ),
+    )
     infer_steps: int | None = Field(
         default=None,
         description=(
@@ -151,6 +158,11 @@ class TaskInput(BaseModel):
 
     model_config = _WIRE_MODEL_CONFIG
 
+    # What to generate
+    model: str = Field(description="Model id, e.g. 'Wan2.2-A14B', 'Kling-v3'.")
+    task_type: str = Field(description="one of T2I, I2I, T2V, I2V, R2V")
+
+    # Prompt
     prompt: str = Field(description="Text prompt driving generation.")
     enhance_prompt: bool | None = Field(
         default=None,
@@ -169,12 +181,22 @@ class TaskInput(BaseModel):
             "**This is only supported/needed for Kling-v3 R2V.**"
         ),
     )
-    model: str = Field(description="Model id, e.g. 'Wan2.2-A14B', 'Kling-v3'.")
-    task_type: str = Field(description="one of T2I, I2I, T2V, I2V, R2V")
-    moderate: bool = Field(
-        default=True,
-        description="Whether this request is screened by content moderation.",
+    negative_prompt: str | None = Field(
+        default=None,
+        description=(
+            "What the video should avoid. **Kling-v3 only.** Omitted -> the "
+            "vendor default ('blur, distort, and low quality')."
+        ),
     )
+    cfg_scale: float | None = Field(
+        default=None,
+        description=(
+            "How strongly the output adheres to the prompt, in [0, 1]. "
+            "**Kling-v3 only.** Omitted -> the vendor default (0.5)."
+        ),
+    )
+
+    # Output configuration
     video_config: VideoConfig | None = Field(
         default=None, description="Required for video task types."
     )
@@ -185,15 +207,37 @@ class TaskInput(BaseModel):
         default=None,
         description="Seed for reproducible generation. If not specified, a random seed will be used.",
     )
+
+    # Source media (I2I, I2V, R2V)
     src_image_urls: list[str] | None = Field(
         default=None,
         description=(
             "Source / reference image URLs. "
             "Only needed for tasks that require input images like I2I, I2V, R2V. "
             "Refer to the API docs for concrete examples of how to use this and what inputs are allowed. "
-            "For image to video tasks, this can optionally specify 1 (first frame) or 2 (first & last frames) input images. "
+            "For I2V, entry 0 is the start frame and an optional entry 1 is the "
+            "end frame on models that support it (Seedance-2.0, Kling-v3, "
+            "LTX-2.3-Pro, Vidu-Q3-Turbo, Vidu-Q3-Pro); a second image returns "
+            "400 elsewhere. "
         ),
     )
+    src_video_urls: list[str] | None = Field(
+        default=None,
+        description=(
+            "Reference video URLs. **Only supported for Seedance-2.0 R2V**, "
+            "which accepts up to 3 clips of 2-15s each (15s combined)."
+        ),
+    )
+    src_audio_urls: list[str] | None = Field(
+        default=None,
+        description=(
+            "Reference audio URLs. **Only supported for Seedance-2.0 R2V**, "
+            "which accepts up to 3 clips totalling 15s. Audio may not be the "
+            "only reference - at least one image or video is required."
+        ),
+    )
+
+    # Named references the prompt addresses via @name (R2V)
     subject_to_image_ids: dict[str, list[int]] | None = Field(
         default=None,
         description=(
@@ -202,4 +246,24 @@ class TaskInput(BaseModel):
             "prompt may address a subject via '@name'. Honored by vendors with "
             "named subjects (Vidu reference2video)."
         ),
+    )
+    subject_to_video_ids: dict[str, list[int]] | None = Field(
+        default=None,
+        description=(
+            "R2V only: subject_to_image_ids for src_video_urls. A name may "
+            "appear in only one of the three subject maps. Seedance-2.0 only."
+        ),
+    )
+    subject_to_audio_ids: dict[str, list[int]] | None = Field(
+        default=None,
+        description=(
+            "R2V only: subject_to_image_ids for src_audio_urls. A name may "
+            "appear in only one of the three subject maps. Seedance-2.0 only."
+        ),
+    )
+
+    # Policy
+    moderate: bool = Field(
+        default=True,
+        description="Whether this request is screened by content moderation.",
     )

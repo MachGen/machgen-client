@@ -200,7 +200,11 @@ def _run_inner(http: httpx.Client, state: _StreamState) -> None:
             state.set_terminal(None, exc=e)
             return
         except Exception as e:
-            # Defensive — should not happen in normal flow.
+            # A close() racing with an in-flight iter_raw() raises
+            # httpx.StreamClosed here; treat it like the _StreamDropped
+            # branch above and keep the terminal state signal_stop() set.
+            if state.stop_event.is_set():
+                return
             logger.exception("Unexpected error in SSE consumer thread")
             state.set_terminal(None, exc=e)
             return

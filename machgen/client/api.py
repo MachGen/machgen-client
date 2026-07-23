@@ -176,9 +176,26 @@ class TaskInput(BaseModel):
     multi_prompt: list[str] | None = Field(
         default=None,
         description=(
-            "Per-shot prompts for multi-shot passthrough vendors; length must "
-            "match src_image_urls when used as reference frames. "
-            "**This is only supported/needed for Kling-v3 R2V.**"
+            "Per-shot text prompts for Kling-v3 multi-shot video (`shot_type` "
+            "'customize'). 1-6 shots, paired 1:1 with `shot_durations`. The "
+            "top-level `prompt` is ignored when this is set."
+        ),
+    )
+    shot_type: str | None = Field(
+        default=None,
+        description=(
+            "Enables Kling-v3 multi-shot (T2V / I2V). 'customize' splits the "
+            "video into the shots given by `multi_prompt` + `shot_durations`; "
+            "'intelligence' derives the shots from the single `prompt`. Omitted "
+            "-> single-shot."
+        ),
+    )
+    shot_durations: list[int] | None = Field(
+        default=None,
+        description=(
+            "Per-shot durations in seconds for `shot_type` 'customize'; one per "
+            "`multi_prompt` entry, each >= 1, summing to "
+            "`video_config.duration_secs`."
         ),
     )
     negative_prompt: str | None = Field(
@@ -259,6 +276,22 @@ class TaskInput(BaseModel):
         description=(
             "R2V only: subject_to_image_ids for src_audio_urls. A name may "
             "appear in only one of the three subject maps. Seedance-2.0 only."
+        ),
+    )
+    element_ids: list[int] | None = Field(
+        default=None,
+        description=(
+            "Kling-v3 only: ordered Kling element library ids (<=3) to include. "
+            "The prompt references them via `@handle` (see `element_handles`), "
+            "rewritten to Kling's positional `<<<element_N>>>` at submit."
+        ),
+    )
+    element_handles: list[str] | None = Field(
+        default=None,
+        description=(
+            "Kling-v3 only: the `@handle` for each `element_ids` entry (same "
+            "order). Each `@handle` in the prompt is rewritten to "
+            "`<<<element_N>>>` for the vendor while the stored prompt keeps it."
         ),
     )
 

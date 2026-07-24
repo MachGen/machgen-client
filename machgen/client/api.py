@@ -82,6 +82,54 @@ class VideoConfig(BaseModel):
 
     # Accept the legacy scalar shape from tasks stored before guidance_scale
     # became a list, so old rows keep loading after the schema change.
+    multi_prompt: list[str] | None = Field(
+        default=None,
+        description=(
+            "Per-shot text prompts for Kling-v3 multi-shot video (`shot_type` "
+            "'customize'). 1-6 shots, paired 1:1 with `shot_durations`. The "
+            "top-level `prompt` is ignored when this is set."
+        ),
+    )
+    shot_type: str | None = Field(
+        default=None,
+        description=(
+            "Enables Kling-v3 multi-shot (T2V / I2V). 'customize' splits the "
+            "video into the shots given by `multi_prompt` + `shot_durations`; "
+            "'intelligence' derives the shots from the single `prompt`. Omitted "
+            "-> single-shot."
+        ),
+    )
+    shot_durations: list[int] | None = Field(
+        default=None,
+        description=(
+            "Per-shot durations in seconds for `shot_type` 'customize'; one per "
+            "`multi_prompt` entry, each >= 1, summing to `duration_secs`."
+        ),
+    )
+    negative_prompt: str | None = Field(
+        default=None,
+        description=(
+            "What the video should avoid. **Kling-v3 only.** Omitted -> the "
+            "vendor default ('blur, distort, and low quality')."
+        ),
+    )
+    element_ids: list[int] | None = Field(
+        default=None,
+        description=(
+            "Kling-v3 only: ordered Kling element library ids (<=3) to include. "
+            "The prompt references them via `@handle` (see `element_handles`), "
+            "rewritten to Kling's positional `<<<element_N>>>` at submit."
+        ),
+    )
+    element_handles: list[str] | None = Field(
+        default=None,
+        description=(
+            "Kling-v3 only: the `@handle` for each `element_ids` entry (same "
+            "order). Each `@handle` in the prompt is rewritten to "
+            "`<<<element_N>>>` for the vendor while the stored prompt keeps it."
+        ),
+    )
+
     @field_validator("guidance_scale", mode="before")
     @classmethod
     def _coerce_scalar_guidance_scale(cls, v: object) -> object:
@@ -173,46 +221,6 @@ class TaskInput(BaseModel):
             "Users can still explicitly force it to enable/disable by setting this field based on the requirement."
         ),
     )
-    multi_prompt: list[str] | None = Field(
-        default=None,
-        description=(
-            "Per-shot text prompts for Kling-v3 multi-shot video (`shot_type` "
-            "'customize'). 1-6 shots, paired 1:1 with `shot_durations`. The "
-            "top-level `prompt` is ignored when this is set."
-        ),
-    )
-    shot_type: str | None = Field(
-        default=None,
-        description=(
-            "Enables Kling-v3 multi-shot (T2V / I2V). 'customize' splits the "
-            "video into the shots given by `multi_prompt` + `shot_durations`; "
-            "'intelligence' derives the shots from the single `prompt`. Omitted "
-            "-> single-shot."
-        ),
-    )
-    shot_durations: list[int] | None = Field(
-        default=None,
-        description=(
-            "Per-shot durations in seconds for `shot_type` 'customize'; one per "
-            "`multi_prompt` entry, each >= 1, summing to "
-            "`video_config.duration_secs`."
-        ),
-    )
-    negative_prompt: str | None = Field(
-        default=None,
-        description=(
-            "What the video should avoid. **Kling-v3 only.** Omitted -> the "
-            "vendor default ('blur, distort, and low quality')."
-        ),
-    )
-    cfg_scale: float | None = Field(
-        default=None,
-        description=(
-            "How strongly the output adheres to the prompt, in [0, 1]. "
-            "**Kling-v3 only.** Omitted -> the vendor default (0.5)."
-        ),
-    )
-
     # Output configuration
     video_config: VideoConfig | None = Field(
         default=None, description="Required for video task types."
@@ -278,23 +286,6 @@ class TaskInput(BaseModel):
             "appear in only one of the three subject maps. Seedance-2.0 only."
         ),
     )
-    element_ids: list[int] | None = Field(
-        default=None,
-        description=(
-            "Kling-v3 only: ordered Kling element library ids (<=3) to include. "
-            "The prompt references them via `@handle` (see `element_handles`), "
-            "rewritten to Kling's positional `<<<element_N>>>` at submit."
-        ),
-    )
-    element_handles: list[str] | None = Field(
-        default=None,
-        description=(
-            "Kling-v3 only: the `@handle` for each `element_ids` entry (same "
-            "order). Each `@handle` in the prompt is rewritten to "
-            "`<<<element_N>>>` for the vendor while the stored prompt keeps it."
-        ),
-    )
-
     # Policy
     moderate: bool = Field(
         default=True,

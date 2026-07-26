@@ -276,10 +276,10 @@ class MachGenClient:
         ref, leaving http(s):// URLs untouched. Returns the task unchanged when
         it carries no local sources."""
         updates: dict[str, object] = {}
-        if task.src_image_urls is not None:
-            updates["src_image_urls"] = [
-                self._resolve_source_ref(u) for u in task.src_image_urls
-            ]
+        for field in ("src_image_urls", "src_video_urls", "src_audio_urls"):
+            refs = getattr(task, field)
+            if refs is not None:
+                updates[field] = [self._resolve_source_ref(ref) for ref in refs]
         return task.model_copy(update=updates) if updates else task
 
     def _resolve_source_ref(self, ref: str) -> str:

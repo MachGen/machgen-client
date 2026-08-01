@@ -190,6 +190,143 @@ class ImageConfig(BaseModel):
         return v
 
 
+class DialogueTurn(BaseModel):
+    """One speaker turn in a T2D (text to dialogue) task."""
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    voice_id: str = Field(description="Voice speaking this turn.")
+    text: str = Field(description="What this speaker says.")
+
+
+class MusicChunk(BaseModel):
+    """One segment of a T2M composition plan (ElevenLabs music_v2)."""
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    text: str = Field(
+        default="",
+        description="Sung or spoken text for this segment. Empty for instrumental.",
+    )
+    duration_ms: int = Field(description="Segment length in milliseconds.")
+    positive_styles: list[str] | None = Field(
+        default=None, description="Styles this segment should have."
+    )
+    negative_styles: list[str] | None = Field(
+        default=None, description="Styles this segment should avoid."
+    )
+    context_adherence: str | None = Field(
+        default=None,
+        description=(
+            "How closely this segment follows the surrounding ones: 'low', "
+            "'medium', or 'high'. Omitted uses the model default."
+        ),
+    )
+
+
+class CompositionPlan(BaseModel):
+    """Segment-by-segment structure for a T2M task, in place of a prompt."""
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    chunks: list[MusicChunk] = Field(description="Ordered segments of the track.")
+
+
+class AudioConfig(BaseModel):
+    """Output configuration for the audio task types.
+
+    Every field is read by exactly one surface, named in its description. The
+    free-text intent always rides on ``TaskInput.prompt`` - except T2D, whose
+    text lives only in ``turns``.
+    """
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    voice_id: str | None = Field(
+        default=None,
+        description="T2S only: the voice to speak the prompt.",
+    )
+    turns: list[DialogueTurn] | None = Field(
+        default=None,
+        description=(
+            "T2D only: ordered speaker turns. The prompt is unused for T2D - "
+            "all spoken text lives here."
+        ),
+    )
+    duration_secs: float | None = Field(
+        default=None,
+        description="T2SFX and T2M: length of the generated audio in seconds.",
+    )
+    stability: float | None = Field(
+        default=None,
+        description=(
+            "T2S and T2D: 0-1. Lower is more emotionally variable, higher is "
+            "more consistent. eleven_v3 accepts only 0.0, 0.5, or 1.0. "
+            "Omitted uses the model default."
+        ),
+    )
+    speed: float | None = Field(
+        default=None,
+        description="T2S only: speaking rate multiplier. Omitted uses the model default.",
+    )
+    similarity_boost: float | None = Field(
+        default=None,
+        description=(
+            "T2S only: 0-1. How closely the output tracks the original voice. "
+            "Omitted uses the model default."
+        ),
+    )
+    style: float | None = Field(
+        default=None,
+        description=(
+            "T2S only: 0-1. Style exaggeration. Higher values cost more latency. "
+            "Omitted uses the model default."
+        ),
+    )
+    use_speaker_boost: bool | None = Field(
+        default=None,
+        description="T2S only: boost similarity to the original speaker.",
+    )
+    output_format: str | None = Field(
+        default=None,
+        description=(
+            "All audio surfaces: codec_samplerate_bitrate, e.g. 'mp3_44100_128'. "
+            "Only mp3 variants are accepted - generated audio is stored as .mp3. "
+            "Omitted uses mp3_44100_128."
+        ),
+    )
+    apply_text_normalization: str | None = Field(
+        default=None,
+        description=(
+            "T2S and T2D: 'auto' (default), 'on', or 'off'. Controls whether "
+            "numbers, dates, and abbreviations are spelled out before synthesis."
+        ),
+    )
+    prompt_influence: float | None = Field(
+        default=None,
+        description=(
+            "T2SFX only: 0-1. How literally the sound follows the prompt. "
+            "Omitted uses the model default."
+        ),
+    )
+    loop: bool | None = Field(
+        default=None,
+        description="T2SFX only: generate a seamlessly looping clip.",
+    )
+    force_instrumental: bool | None = Field(
+        default=None,
+        description="T2M only: generate without vocals.",
+    )
+    composition_plan: CompositionPlan | None = Field(
+        default=None,
+        description=(
+            "T2M only: build the track segment by segment instead of from a "
+            "prompt. Mutually exclusive with `prompt`, and the track length is "
+            "the sum of the segment durations rather than `duration_secs`."
+        ),
+    )
+
+
 class TaskUpdate(BaseModel):
     model_config = _WIRE_MODEL_CONFIG
 
@@ -208,10 +345,20 @@ class TaskInput(BaseModel):
 
     # What to generate
     model: str = Field(description="Model id, e.g. 'Wan2.2-A14B', 'Kling-v3'.")
-    task_type: str = Field(description="one of T2I, I2I, T2V, I2V, R2V")
+    task_type: str = Field(
+        description=(
+            "one of T2I, I2I (image), T2V, I2V, R2V, F2F, UPSCALE (video), "
+            "T2S, T2D, T2SFX, T2M (audio)"
+        )
+    )
 
     # Prompt
-    prompt: str = Field(description="Text prompt driving generation.")
+    prompt: str = Field(
+        description=(
+            "Text prompt driving generation. Unused for T2D, whose text lives "
+            "in audio_config.turns."
+        )
+    )
     enhance_prompt: bool | None = Field(
         default=None,
         description=(
@@ -227,6 +374,9 @@ class TaskInput(BaseModel):
     )
     image_config: ImageConfig | None = Field(
         default=None, description="Required for image task types."
+    )
+    audio_config: AudioConfig | None = Field(
+        default=None, description="Required for audio task types."
     )
     seed: int | None = Field(
         default=None,

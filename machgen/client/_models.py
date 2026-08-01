@@ -40,8 +40,12 @@ class TaskMetadata(BaseModel):
     height: int | None = Field(default=None, description="Output height in pixels.")
     width: int | None = Field(default=None, description="Output width in pixels.")
     aspect_ratio: str | None = Field(default=None, description="Output aspect ratio.")
-    duration_secs: int | None = Field(
-        default=None, description="Clip duration in seconds (video)."
+    duration_secs: float | None = Field(
+        default=None,
+        description=(
+            "Clip duration in seconds (video/audio). Audio surfaces accept "
+            "fractional durations (e.g. a 0.5s sound effect)."
+        ),
     )
     src_image_urls: list[str] | None = Field(
         default=None, description="Source / reference image refs."

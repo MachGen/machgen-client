@@ -50,6 +50,10 @@ class TaskMetadata(BaseModel):
     src_image_urls: list[str] | None = Field(
         default=None, description="Source / reference image refs."
     )
+    source_frame_role: str | None = Field(
+        default=None,
+        description="Meaning of the sole I2V source image: first_frame or last_frame.",
+    )
     acceleration: str | None = Field(
         default=None, description="Acceleration profile applied by the backend."
     )

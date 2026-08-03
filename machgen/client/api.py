@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -334,6 +335,20 @@ class TaskUpdate(BaseModel):
     progress: float | None = None
 
 
+class ReferenceOrderItem(BaseModel):
+    """One entry in the original cross-media R2V conditioning sequence.
+
+    ``index`` addresses the matching ``src_*_urls`` list. Keeping order
+    separate avoids duplicating URLs while preserving the sequence expected by
+    models such as MiniMax H3.
+    """
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    type: Literal["image", "video", "audio"]
+    index: int = Field(ge=0)
+
+
 class TaskInput(BaseModel):
     """
     Public input model for :meth:`machgen.client.MachGenClient.submit_task`.
@@ -391,24 +406,34 @@ class TaskInput(BaseModel):
             "Only needed for tasks that require input images like I2I, I2V, R2V. "
             "Refer to the API docs for concrete examples of how to use this and what inputs are allowed. "
             "For I2V, entry 0 is the start frame and an optional entry 1 is the "
-            "end frame on models that support it (Seedance-2.0, Kling-v3, "
-            "LTX-2.3-Pro, Vidu-Q3-Turbo, Vidu-Q3-Pro); a second image returns "
-            "400 elsewhere. "
+            "end frame on surfaces that declare end-frame support; a second "
+            "image returns 400 elsewhere. For a supported last-frame-only "
+            "request, send one image and set source_frame_role=last_frame. "
+        ),
+    )
+    source_frame_role: Literal["first_frame", "last_frame"] | None = Field(
+        default=None,
+        description=(
+            "I2V only: meaning of the sole source image. Omitted is equivalent "
+            "to first_frame. last_frame requires a model that explicitly "
+            "supports last-frame-only input, currently MiniMax-H3. Do not send "
+            "this field with zero or two source images."
         ),
     )
     src_video_urls: list[str] | None = Field(
         default=None,
         description=(
-            "Reference video URLs. **Only supported for Seedance-2.0 R2V**, "
-            "which accepts up to 3 clips of 2-15s each (15s combined)."
+            "Reference video URLs for R2V surfaces that declare video-reference "
+            "support. Limits are model-specific and enforced by the synced "
+            "capability contract."
         ),
     )
     src_audio_urls: list[str] | None = Field(
         default=None,
         description=(
-            "Reference audio URLs. **Only supported for Seedance-2.0 R2V**, "
-            "which accepts up to 3 clips totalling 15s. Audio may not be the "
-            "only reference - at least one image or video is required."
+            "Reference audio URLs for R2V surfaces that declare audio-reference "
+            "support. Limits and whether audio may be sent alone are "
+            "model-specific and enforced by the synced capability contract."
         ),
     )
 
@@ -434,6 +459,13 @@ class TaskInput(BaseModel):
         description=(
             "R2V only: subject_to_image_ids for src_audio_urls. A name may "
             "appear in only one of the three subject maps. Seedance-2.0 only."
+        ),
+    )
+    reference_order: list[ReferenceOrderItem] | None = Field(
+        default=None,
+        description=(
+            "R2V only: original order across image, video, and audio "
+            "references. Each entry points to the matching src_*_urls list."
         ),
     )
     # Policy

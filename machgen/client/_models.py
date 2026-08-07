@@ -152,3 +152,19 @@ class UploadResponse(BaseModel):
     artifact_path: str = Field(
         description="Storage path of the uploaded input; reference it as @input/<artifact_path>."
     )
+    # Video only, and best-effort: an upload whose metadata cannot be read is
+    # still a usable source for every surface that does not need these.
+    duration_secs: float | None = Field(
+        default=None,
+        description="Exact source duration in seconds. Video uploads only.",
+    )
+    fps: float | None = Field(
+        default=None, description="Source frame rate. Video uploads only."
+    )
+    frame_count: int | None = Field(
+        default=None,
+        description=(
+            "Exact source frame count, sent to upscaling providers that rebuild "
+            "the source container. Video uploads only."
+        ),
+    )

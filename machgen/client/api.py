@@ -233,6 +233,49 @@ class CompositionPlan(BaseModel):
     chunks: list[MusicChunk] = Field(description="Ordered segments of the track.")
 
 
+class UpscaleConfig(BaseModel):
+    """Knobs for the UPSCALE and IMAGE_UPSCALE task types.
+
+    Kept off ``ImageConfig`` / ``VideoConfig`` so the configs every other surface
+    sends stay free of fields that are meaningless there. Those configs carry
+    only output geometry - and for IMAGE_UPSCALE the geometry is derived by the
+    server from the source, never sent by the client, because it sets the
+    per-megapixel charge.
+
+    Which knobs a model accepts is declared per surface in the capability grid;
+    sending one the selected engine does not declare is rejected at admission.
+    """
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    engine: str | None = Field(
+        default=None,
+        description=(
+            "Engine variant within the selected model, e.g. 'proteus' or "
+            "'redefine'. Omit to use the model's default engine. Call "
+            "list_models for the engines a model exposes."
+        ),
+    )
+    factor: int | None = Field(
+        default=None,
+        description=(
+            "IMAGE_UPSCALE only. How much to scale each edge, e.g. 2 doubles "
+            "width and height. The result is clamped to the model's maximum "
+            "output edge and area, and the final dimensions are returned in "
+            "the task's image_config."
+        ),
+    )
+    params: dict[str, float | bool | str] | None = Field(
+        default=None,
+        description=(
+            "Engine tuning parameters, by name. Only send what you want to "
+            "change: Topaz auto-configures anything omitted, so passing a value "
+            "replaces their tuning rather than confirming it. Which names an "
+            "engine accepts, and their bounds, come from list_models."
+        ),
+    )
+
+
 class AudioConfig(BaseModel):
     """Output configuration for the audio task types.
 
@@ -362,8 +405,8 @@ class TaskInput(BaseModel):
     model: str = Field(description="Model id, e.g. 'Wan2.2-A14B', 'Kling-v3'.")
     task_type: str = Field(
         description=(
-            "one of T2I, I2I (image), T2V, I2V, R2V, F2F, UPSCALE (video), "
-            "T2S, T2D, T2SFX, T2M (audio)"
+            "one of T2I, I2I, IMAGE_UPSCALE (image), T2V, I2V, R2V, F2F, "
+            "UPSCALE (video), T2S, T2D, T2SFX, T2M (audio)"
         )
     )
 
@@ -392,6 +435,13 @@ class TaskInput(BaseModel):
     )
     audio_config: AudioConfig | None = Field(
         default=None, description="Required for audio task types."
+    )
+    upscale_config: UpscaleConfig | None = Field(
+        default=None,
+        description=(
+            "Engine and tuning knobs for UPSCALE and IMAGE_UPSCALE. Required "
+            "for IMAGE_UPSCALE, which reads its factor from here."
+        ),
     )
     seed: int | None = Field(
         default=None,

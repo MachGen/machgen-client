@@ -16,6 +16,7 @@ from machgen.client.api import (
     TaskInput,
     TaskStatus,
     TaskUpdate,
+    UpscaleConfig,
     VideoConfig,
 )
 from machgen.client.client import MachGenClient, SseRetryConfig
@@ -40,5 +41,6 @@ __all__ = [
     "TaskStatusResponse",
     "TaskUpdate",
     "UploadResponse",
+    "UpscaleConfig",
     "VideoConfig",
 ]

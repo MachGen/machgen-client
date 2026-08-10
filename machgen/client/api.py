@@ -457,17 +457,7 @@ class TaskInput(BaseModel):
             "Refer to the API docs for concrete examples of how to use this and what inputs are allowed. "
             "For I2V, entry 0 is the start frame and an optional entry 1 is the "
             "end frame on surfaces that declare end-frame support; a second "
-            "image returns 400 elsewhere. For a supported last-frame-only "
-            "request, send one image and set source_frame_role=last_frame. "
-        ),
-    )
-    source_frame_role: Literal["first_frame", "last_frame"] | None = Field(
-        default=None,
-        description=(
-            "I2V only: meaning of the sole source image. Omitted is equivalent "
-            "to first_frame. last_frame requires a model that explicitly "
-            "supports last-frame-only input, currently MiniMax-H3. Do not send "
-            "this field with zero or two source images."
+            "image returns 400 elsewhere. "
         ),
     )
     src_video_urls: list[str] | None = Field(

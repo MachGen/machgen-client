@@ -24,7 +24,12 @@ class VideoConfig(BaseModel):
         description="Video frames per second. If omitted the default FPS would be used based on the model.",
     )
     duration_secs: int = Field(
-        description="Video duration in seconds.",
+        description=(
+            "Video duration in seconds. Where a surface allows it, -1 asks for "
+            "the reference video's own length instead of a fixed one - required "
+            "when the prompt edits that clip. Allowed values are enforced by "
+            "the synced capability contract."
+        ),
     )
     height: int | None = Field(
         default=None,
@@ -86,7 +91,7 @@ class VideoConfig(BaseModel):
     multi_prompt: list[str] | None = Field(
         default=None,
         description=(
-            "Per-shot text prompts for Kling-v3 multi-shot video (`shot_type` "
+            "Per-shot text prompts for Kling Video 3.0 and Omni multi-shot video (`shot_type` "
             "'customize'). 1-6 shots, paired 1:1 with `shot_durations`. The "
             "top-level `prompt` is ignored when this is set."
         ),
@@ -94,7 +99,7 @@ class VideoConfig(BaseModel):
     shot_type: str | None = Field(
         default=None,
         description=(
-            "Enables Kling-v3 multi-shot (T2V / I2V). 'customize' splits the "
+            "Enables Kling Video 3.0 or Omni multi-shot. 'customize' splits the "
             "video into the shots given by `multi_prompt` + `shot_durations`; "
             "'intelligence' derives the shots from the single `prompt`. Omitted "
             "-> single-shot."
@@ -117,7 +122,7 @@ class VideoConfig(BaseModel):
     element_ids: list[int] | None = Field(
         default=None,
         description=(
-            "Kling-v3 only: ordered Kling element library ids (<=3) to include. "
+            "Kling Video 3.0 and Omni only: ordered Kling element library ids (<=3) to include. "
             "The prompt references them via `@handle` (see `element_handles`), "
             "rewritten to Kling's positional `<<<element_N>>>` at submit."
         ),
@@ -125,7 +130,7 @@ class VideoConfig(BaseModel):
     element_handles: list[str] | None = Field(
         default=None,
         description=(
-            "Kling-v3 only: the `@handle` for each `element_ids` entry (same "
+            "Kling Video 3.0 and Omni only: the `@handle` for each `element_ids` entry (same "
             "order). Each `@handle` in the prompt is rewritten to "
             "`<<<element_N>>>` for the vendor while the stored prompt keeps it."
         ),
@@ -465,7 +470,10 @@ class TaskInput(BaseModel):
         description=(
             "Reference video URLs for R2V surfaces that declare video-reference "
             "support. Limits are model-specific and enforced by the synced "
-            "capability contract."
+            "capability contract. Order is meaningful where the surface edits a "
+            "clip rather than generating a new one: entry 0 is the clip being "
+            "edited and its length sets the output's, while the rest only "
+            "inform the result."
         ),
     )
     src_audio_urls: list[str] | None = Field(

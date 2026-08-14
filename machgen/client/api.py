@@ -33,7 +33,12 @@ class VideoConfig(BaseModel):
     )
     height: int | None = Field(
         default=None,
-        description="Output height in pixels. Required for generation (a missing height is rejected at submit).",
+        description=(
+            "Output height in pixels. Required for generation (a missing height "
+            "is rejected at submit). For UPSCALE this is the target resolution "
+            "tier - the output's shorter side - and both output dimensions are "
+            "derived from the source, preserving its aspect ratio."
+        ),
     )
     width: int | None = Field(
         default=None,

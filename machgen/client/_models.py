@@ -116,14 +116,25 @@ class TaskStatusResponse(GenerateResponse):
         default=None, description="Failure reason, set when status is FAILED."
     )
     generation_time_secs: float | None = Field(
-        default=None, description="Time spent on actual generation."
+        default=None,
+        description="The executor's measured generation duration once COMPLETED.",
+    )
+    active_generation_time_secs: float | None = Field(
+        default=None,
+        description=(
+            "Current wall-clock elapsed duration for the active RUNNING attempt; "
+            "unset outside RUNNING."
+        ),
     )
     upload_time_secs: float | None = Field(
         default=None, description="Time spent uploading the asset after generation."
     )
     queue_time_secs: float | None = Field(
         default=None,
-        description="Time spent waiting in the queue for generation to begin.",
+        description=(
+            "Current queue elapsed time while PENDING; the final queue wait "
+            "through the control-plane trial insert after generation begins."
+        ),
     )
     moderation: ModerationResult | None = Field(
         default=None,

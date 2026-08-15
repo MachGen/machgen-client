@@ -19,7 +19,11 @@ from machgen.client.api import (
     UpscaleConfig,
     VideoConfig,
 )
-from machgen.client.client import MachGenClient, SseRetryConfig
+from machgen.client.client import (
+    MachGenClient,
+    SseRetryConfig,
+    inline_image_source,
+)
 from machgen.client.task_handle import TaskHandle
 
 __all__ = [
@@ -43,4 +47,5 @@ __all__ = [
     "UploadResponse",
     "UpscaleConfig",
     "VideoConfig",
+    "inline_image_source",
 ]

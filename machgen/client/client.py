@@ -6,6 +6,7 @@ read from the ``MACHGEN_API_KEY`` environment variable.
 
 from __future__ import annotations
 
+import base64
 import logging
 import mimetypes
 import os
@@ -35,13 +36,50 @@ from machgen.client.task_handle import (
 _DEFAULT_BASE_URL = "https://api.machgen.ai"
 _DEFAULT_TIMEOUT_SECS = 60.0
 
-# A source ref is either a public http(s):// URL - forwarded untouched - or a
-# local filesystem path, which is uploaded to the input bucket on submit.
+# A source ref is a public http(s):// URL or an inline data: URL - both
+# forwarded untouched - or a local filesystem path, which is uploaded to the
+# input bucket on submit.
 _HTTP_URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+
+# Raw-byte guard for inline_image_source, matching the server's per-image
+# cap for inline data: sources (1 MB raw, ~1.37 MB encoded - base64 inflates
+# by ~4/3).
+_MAX_INLINE_SOURCE_BYTES = 1 * 1024 * 1024
 
 
 def _is_http_url(ref: str) -> bool:
     return bool(_HTTP_URL_RE.match(ref))
+
+
+def inline_image_source(path: str | Path) -> str:
+    """Encode a local image file as an inline ``data:`` source ref.
+
+    For the latency-sensitive ``POST /v0/generate/sync`` endpoint: an inline
+    source rides in the request body, skipping the separate upload round trip.
+    The server verifies the bytes, stores a durable copy, and the task echoes a
+    normal ``@input/...`` ref afterward. Only the sync endpoint accepts inline
+    sources; ``/v0/generate`` rejects them with a 400.
+
+    Raises ValueError for a missing file, an oversize file (1 MB raw - the
+    server's per-image cap for inline sources), or a file whose type cannot
+    be inferred as an image.
+    """
+    file = Path(path)
+    if not file.is_file():
+        raise ValueError(f"Source path does not exist: {str(file.absolute())}")
+    if file.stat().st_size > _MAX_INLINE_SOURCE_BYTES:
+        raise ValueError(
+            f"Inline source exceeds {_MAX_INLINE_SOURCE_BYTES // (1024 * 1024)} MB: "
+            f"{str(file.absolute())}. Upload it instead (submit the local path)."
+        )
+    content_type, _ = mimetypes.guess_type(file.name)
+    if not content_type or not content_type.startswith("image/"):
+        raise ValueError(
+            f"Inline sources must be images; could not infer an image type "
+            f"from {file.name!r}."
+        )
+    encoded = base64.b64encode(file.read_bytes()).decode("ascii")
+    return f"data:{content_type};base64,{encoded}"
 
 
 class SseRetryConfig:
@@ -285,11 +323,15 @@ class MachGenClient:
     def _resolve_source_ref(self, ref: str) -> str:
         if _is_http_url(ref):
             return ref
+        if ref.startswith("data:"):
+            # Inline sources (see inline_image_source) are forwarded verbatim;
+            # the server decides where they are accepted (sync endpoint only).
+            return ref
         path = Path(ref)
         if not path.is_file():
             raise ValueError(
                 f"Source path does not exist: {str(path.absolute())}. Provide a path to a "
-                "local file or a public http(s):// URL."
+                "local file, a public http(s):// URL, or an inline data: URL."
             )
         return self._upload_local_file(path)
 

@@ -40,6 +40,10 @@ class TaskMetadata(BaseModel):
     height: int | None = Field(default=None, description="Output height in pixels.")
     width: int | None = Field(default=None, description="Output width in pixels.")
     aspect_ratio: str | None = Field(default=None, description="Output aspect ratio.")
+    resolution_label: str | None = Field(
+        default=None,
+        description="Display-safe resolution, such as 1K · 16:9 or 1280x720.",
+    )
     duration_secs: float | None = Field(
         default=None,
         description=(

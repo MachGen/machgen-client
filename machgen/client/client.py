@@ -35,6 +35,7 @@ from machgen.client.task_handle import (
 
 _DEFAULT_BASE_URL = "https://api.machgen.ai"
 _DEFAULT_TIMEOUT_SECS = 60.0
+_LEGACY_UPLOAD_MAX_BYTES = 32 * 1024 * 1024
 
 # A source ref is a public http(s):// URL or an inline data: URL - both
 # forwarded untouched - or a local filesystem path, which is uploaded to the
@@ -317,10 +318,16 @@ class MachGenClient:
         for field in ("src_image_urls", "src_video_urls", "src_audio_urls"):
             refs = getattr(task, field)
             if refs is not None:
-                updates[field] = [self._resolve_source_ref(ref) for ref in refs]
+                allow_direct_video = (
+                    task.task_type in {"UPSCALE", "R2V"} and field == "src_video_urls"
+                )
+                updates[field] = [
+                    self._resolve_source_ref(ref, allow_direct_video=allow_direct_video)
+                    for ref in refs
+                ]
         return task.model_copy(update=updates) if updates else task
 
-    def _resolve_source_ref(self, ref: str) -> str:
+    def _resolve_source_ref(self, ref: str, *, allow_direct_video: bool) -> str:
         if _is_http_url(ref):
             return ref
         if ref.startswith("data:"):
@@ -333,11 +340,18 @@ class MachGenClient:
                 f"Source path does not exist: {str(path.absolute())}. Provide a path to a "
                 "local file, a public http(s):// URL, or an inline data: URL."
             )
-        return self._upload_local_file(path)
+        return self._upload_local_file(path, allow_direct_video=allow_direct_video)
 
-    def _upload_local_file(self, path: Path) -> str:
+    def _upload_local_file(self, path: Path, *, allow_direct_video: bool) -> str:
         logging.info(f"Uploading input {path}")
         content_type, _ = mimetypes.guess_type(path.name)
+        if path.stat().st_size > _LEGACY_UPLOAD_MAX_BYTES:
+            if not allow_direct_video or not (content_type or "").startswith("video/"):
+                raise ValueError(
+                    "This local file is above the 32 MiB request-body limit and "
+                    "the selected input does not support direct video upload"
+                )
+            return self._upload_direct_video(path, content_type or "video/mp4")
         resp = self._http.post(
             "/api/v0/upload",
             files={
@@ -350,6 +364,99 @@ class MachGenClient:
         )
         resp.raise_for_status()
         artifact_path = UploadResponse.model_validate(resp.json()).artifact_path
+        return f"@input/{artifact_path}"
+
+    def _send_storage_request(
+        self, method: str, url: str, *, content: bytes, headers: dict[str, str]
+    ) -> httpx.Response:
+        request = self._http.build_request(
+            method, url, content=content, headers=headers
+        )
+        request.headers.pop("Authorization", None)
+        return self._http.send(request)
+
+    @staticmethod
+    def _resumable_offset(response: httpx.Response, fallback: int) -> int:
+        match = re.search(r"bytes=\d+-(\d+)$", response.headers.get("Range", ""), re.I)
+        return int(match.group(1)) + 1 if match else fallback
+
+    def _query_resumable_offset(self, upload_url: str, total_bytes: int) -> int:
+        response = self._send_storage_request(
+            "PUT",
+            upload_url,
+            content=b"",
+            headers={"Content-Range": f"bytes */{total_bytes}"},
+        )
+        if response.status_code in (200, 201):
+            return total_bytes
+        if response.status_code == 308:
+            return self._resumable_offset(response, 0)
+        response.raise_for_status()
+        raise RuntimeError("Unexpected resumable upload status")
+
+    def _upload_direct_video(self, path: Path, content_type: str) -> str:
+        size_bytes = path.stat().st_size
+        initiated = self._http.post(
+            "/api/v0/uploads/direct/initiate",
+            json={
+                "file_name": path.name,
+                "content_type": content_type,
+                "size_bytes": size_bytes,
+            },
+        )
+        initiated.raise_for_status()
+        session = initiated.json()
+        upload_url = str(session["upload_url"])
+        chunk_size = int(session["chunk_size"])
+        offset = 0
+        with path.open("rb") as source:
+            while offset < size_bytes:
+                source.seek(offset)
+                chunk = source.read(min(chunk_size, size_bytes - offset))
+                end = offset + len(chunk)
+                last_error: Exception | None = None
+                for _ in range(3):
+                    try:
+                        response = self._send_storage_request(
+                            "PUT",
+                            upload_url,
+                            content=chunk,
+                            headers={
+                                "Content-Type": content_type,
+                                "Content-Range": f"bytes {offset}-{end - 1}/{size_bytes}",
+                            },
+                        )
+                        if response.status_code in (200, 201):
+                            offset = size_bytes
+                        elif response.status_code == 308:
+                            offset = self._resumable_offset(response, end)
+                        else:
+                            response.raise_for_status()
+                        last_error = None
+                        break
+                    except (httpx.HTTPError, OSError) as error:
+                        last_error = error
+                        try:
+                            offset = self._query_resumable_offset(
+                                upload_url, size_bytes
+                            )
+                        except (httpx.HTTPError, OSError) as query_error:
+                            last_error = query_error
+                            continue
+                        if offset >= size_bytes:
+                            last_error = None
+                            break
+                        source.seek(offset)
+                        chunk = source.read(min(chunk_size, size_bytes - offset))
+                        end = offset + len(chunk)
+                if last_error is not None:
+                    raise last_error
+        completed = self._http.post(
+            "/api/v0/uploads/direct/complete",
+            json={"upload_token": session["upload_token"]},
+        )
+        completed.raise_for_status()
+        artifact_path = UploadResponse.model_validate(completed.json()).artifact_path
         return f"@input/{artifact_path}"
 
     def wait(self, handle: TaskHandle, timeout: float = 300.0) -> TaskStatusResponse:

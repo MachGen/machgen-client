@@ -457,6 +457,17 @@ class TaskInput(BaseModel):
         default=None,
         description="Seed for reproducible generation. If not specified, a random seed will be used.",
     )
+    optimization_level: str | None = Field(
+        default=None,
+        description=(
+            "Speed/quality trade-off tier: 'HIGH' or 'LOW'. 'HIGH' applies "
+            "more aggressive inference optimizations for lower latency at "
+            "some quality cost; 'LOW' stays closest to the unoptimized "
+            "output. This is a best-effort match: if the model does not "
+            "support the requested level the model default is used. Omitted "
+            "means the model default."
+        ),
+    )
 
     # Source media (I2I, I2V, R2V)
     src_image_urls: list[str] | None = Field(
@@ -487,6 +498,17 @@ class TaskInput(BaseModel):
             "Reference audio URLs for R2V surfaces that declare audio-reference "
             "support. Limits and whether audio may be sent alone are "
             "model-specific and enforced by the synced capability contract."
+        ),
+    )
+    reference_video_operation: Literal["reference", "edit", "extend"] | None = Field(
+        default=None,
+        description=(
+            "How the primary reference video is used on R2V surfaces that "
+            "declare these operations. 'reference' conditions a new video, "
+            "'edit' modifies the primary clip while matching its framing and "
+            "length, and 'extend' continues it with a requested output length. "
+            "The primary clip is src_video_urls[0]. Omitted preserves legacy "
+            "provider-classified behavior."
         ),
     )
 

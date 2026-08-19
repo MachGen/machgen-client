@@ -18,7 +18,7 @@ pip install "git+https://github.com/MachGen/machgen-client.git"
 
 ## Quick Start
 
-Check the [docs](https://www.machgen.ai/docs/`) on how authentication
+Check the [docs](https://www.machgen.ai/docs) on how authentication
 works and get an API key from there.
 
 Populate the API key either in env var `MACHGEN_API_KEY`
@@ -38,6 +38,14 @@ with MachGenClient() as client:
     )
     result = client.wait(handle)
     print(result.task_output[TaskOutputType.VIDEO])
+```
+
+To save part of a completed video without paid regeneration:
+
+```python
+with MachGenClient() as client:
+    handle = client.extract_video_clip("<video-task-id>", 1.250, 3.750)
+    result = client.wait(handle)
 ```
 
 ## Documentation

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import math
 import mimetypes
 import os
 import re
@@ -125,6 +126,7 @@ class MachGenClient:
             - T2V (Text to Video)
             - I2V (Image to Video)
             - R2V (Reference to Video)
+        - Free clip extraction from a completed owned video
 
     The client uses a polling model. The caller can submit a video or image task.
 
@@ -305,6 +307,49 @@ class MachGenClient:
         resp = self._http.post(
             "/api/v0/generate",
             json=task.model_dump(mode="json", exclude_none=True),
+        )
+        resp.raise_for_status()
+        body = GenerateResponse.model_validate(resp.json())
+        return TaskHandle(body.task_id, self, on_update=on_update)
+
+    def extract_video_clip(
+        self,
+        source_task_id: str,
+        start_secs: float,
+        end_secs: float,
+        *,
+        on_update: UpdateCallback | None = None,
+    ) -> TaskHandle:
+        """Save part of an owned generated video as a new video asset.
+
+        The operation preserves the source audio and uses the free
+        ``EXTRACT_VIDEO_CLIP`` post-processing task rather than paid generation.
+        ``start_secs`` is inclusive and ``end_secs`` is the exclusive endpoint.
+        The server validates the range against the owned source's duration.
+        """
+        self._check_open()
+        task_id = source_task_id.strip()
+        if (
+            not task_id
+            or len(task_id) > 200
+            or any(separator in task_id for separator in ("/", "\\", "?", "#"))
+        ):
+            raise ValueError("source_task_id must be a valid generated task id")
+        if not math.isfinite(start_secs) or start_secs < 0:
+            raise ValueError("start_secs must be a non-negative number")
+        if not math.isfinite(end_secs) or end_secs <= start_secs:
+            raise ValueError("end_secs must be greater than start_secs")
+
+        resp = self._http.post(
+            "/api/v0/generate",
+            json={
+                "prompt": f"Clip {start_secs:g}s to {end_secs:g}s",
+                "model": "NO_MODEL",
+                "task_type": "EXTRACT_VIDEO_CLIP",
+                "src_video_urls": [f"/api/v0/assets/{task_id}"],
+                "clip_start_secs": start_secs,
+                "clip_end_secs": end_secs,
+            },
         )
         resp.raise_for_status()
         body = GenerateResponse.model_validate(resp.json())

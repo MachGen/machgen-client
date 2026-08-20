@@ -54,6 +54,18 @@ class TaskMetadata(BaseModel):
     src_image_urls: list[str] | None = Field(
         default=None, description="Source / reference image refs."
     )
+    src_video_urls: list[str] | None = Field(
+        default=None, description="Source / reference video refs."
+    )
+    src_audio_urls: list[str] | None = Field(
+        default=None, description="Source / reference audio refs."
+    )
+    src_file_urls: list[str] | None = Field(
+        default=None, description="Source file refs."
+    )
+    src_webpage_urls: list[str] | None = Field(
+        default=None, description="Source webpage URLs."
+    )
     acceleration: str | None = Field(
         default=None, description="Acceleration profile applied by the backend."
     )

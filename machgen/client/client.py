@@ -360,7 +360,12 @@ class MachGenClient:
         ref, leaving http(s):// URLs untouched. Returns the task unchanged when
         it carries no local sources."""
         updates: dict[str, object] = {}
-        for field in ("src_image_urls", "src_video_urls", "src_audio_urls"):
+        for field in (
+            "src_image_urls",
+            "src_video_urls",
+            "src_audio_urls",
+            "src_file_urls",
+        ):
             refs = getattr(task, field)
             if refs is not None:
                 allow_direct_video = (

@@ -25,10 +25,10 @@ class VideoConfig(BaseModel):
     )
     duration_secs: int = Field(
         description=(
-            "Video duration in seconds. Where a surface allows it, -1 asks for "
-            "the reference video's own length instead of a fixed one - required "
-            "when the prompt edits that clip. Allowed values are enforced by "
-            "the synced capability contract."
+            "Video duration in seconds. Where a surface allows it, -1 asks the "
+            "model to determine the length from the request, such as matching a "
+            "reference clip or selecting a smart output duration. Allowed values "
+            "are enforced by the synced capability contract."
         ),
     )
     height: int | None = Field(
@@ -47,8 +47,9 @@ class VideoConfig(BaseModel):
     aspect_ratio: str | None = Field(
         default=None,
         description=(
-            "Output aspect ratio. "
-            "The default is 16:9 if omitted. "
+            "Output aspect ratio. The model capability contract declares the "
+            "omission default; most models use 16:9, while source-aware models "
+            "may use adaptive. "
             "The width of the output will be updated to match the height based on the aspect ratio, "
             "rounded up to the nearest integer. "
         ),
@@ -498,6 +499,23 @@ class TaskInput(BaseModel):
             "Reference audio URLs for R2V surfaces that declare audio-reference "
             "support. Limits and whether audio may be sent alone are "
             "model-specific and enforced by the synced capability contract."
+        ),
+    )
+    src_file_urls: list[str] | None = Field(
+        default=None,
+        description=(
+            "Public HTTPS document URLs or local paths for R2V surfaces "
+            "that declare file input support. This mode may be mutually "
+            "exclusive with ordinary media references on a given model. Local "
+            "paths are uploaded by the Python client before submission."
+        ),
+    )
+    src_webpage_urls: list[str] | None = Field(
+        default=None,
+        description=(
+            "Publicly reachable HTTPS webpage URLs for R2V surfaces that can use a linked page as input. "
+            "This mode may be mutually exclusive with files and ordinary media "
+            "references on a given model."
         ),
     )
     reference_video_operation: Literal["reference", "edit", "extend"] | None = Field(

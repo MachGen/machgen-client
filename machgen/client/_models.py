@@ -158,7 +158,10 @@ class TaskStatusResponse(GenerateResponse):
     )
     execution_provider: str | None = Field(
         default=None,
-        description="Actual provider of the terminal execution trial.",
+        description=(
+            'Actual provider of the execution - "machgen" whenever any stage of '
+            "the task ran on MachGen GPUs, otherwise the vendor that ran it."
+        ),
     )
     overflow_converted: bool = Field(
         default=False,

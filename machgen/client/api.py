@@ -35,9 +35,10 @@ class VideoConfig(BaseModel):
         default=None,
         description=(
             "Output height in pixels. Required for generation (a missing height "
-            "is rejected at submit). For UPSCALE this is the target resolution "
-            "tier - the output's shorter side - and both output dimensions are "
-            "derived from the source, preserving its aspect ratio."
+            "is rejected at submit). For UPSCALE on a video upscale model this "
+            "is the target resolution tier - the output's shorter side - and "
+            "both output dimensions are derived from the source, preserving "
+            "its aspect ratio."
         ),
     )
     width: int | None = Field(
@@ -245,12 +246,12 @@ class CompositionPlan(BaseModel):
 
 
 class UpscaleConfig(BaseModel):
-    """Knobs for the UPSCALE and IMAGE_UPSCALE task types.
+    """Knobs for the UPSCALE task type.
 
     Kept off ``ImageConfig`` / ``VideoConfig`` so the configs every other surface
     sends stay free of fields that are meaningless there. Those configs carry
-    only output geometry - and for IMAGE_UPSCALE the geometry is derived by the
-    server from the source, never sent by the client, because it sets the
+    only output geometry - and for image upscale models the geometry is derived
+    by the server from the source, never sent by the client, because it sets the
     per-megapixel charge.
 
     Which knobs a model accepts is declared per surface in the capability grid;
@@ -270,10 +271,10 @@ class UpscaleConfig(BaseModel):
     factor: int | None = Field(
         default=None,
         description=(
-            "IMAGE_UPSCALE only. How much to scale each edge, e.g. 2 doubles "
-            "width and height. The result is clamped to the model's maximum "
-            "output edge and area, and the final dimensions are returned in "
-            "the task's image_config."
+            "Image upscale models only. How much to scale each edge, e.g. 2 "
+            "doubles width and height. The result is clamped to the model's "
+            "maximum output edge and area, and the final dimensions are "
+            "returned in the task's image_config."
         ),
     )
     params: dict[str, float | bool | str] | None = Field(
@@ -416,8 +417,9 @@ class TaskInput(BaseModel):
     model: str = Field(description="Model id, e.g. 'Wan2.2-A14B', 'Kling-v3'.")
     task_type: str = Field(
         description=(
-            "one of T2I, I2I, IMAGE_UPSCALE (image), T2V, I2V, R2V, F2F, "
-            "UPSCALE (video), T2S, T2D, T2SFX, T2M (audio)"
+            "one of T2I, I2I (image), T2V, I2V, R2V, F2F (video), UPSCALE "
+            "(image or video, following the model's upscale surface), "
+            "T2S, T2D, T2SFX, T2M (audio)"
         )
     )
 
@@ -431,10 +433,11 @@ class TaskInput(BaseModel):
     enhance_prompt: bool | None = Field(
         default=None,
         description=(
-            "Whether prompt enhancement should be enabled. "
-            "Enabling this would slow down generation but would improve quality. "
-            "By default, if this is not explicitly set we will let the model determine the default behavior. "
-            "Users can still explicitly force it to enable/disable by setting this field based on the requirement."
+            "Enhance the prompt to get expected output. "
+            "Most users should leave this in default setting. "
+            "For new generation of models (LTX, MiniMax-H3 and beyond), "
+            "turning off prompt enhancement would severely degrade quality. "
+            "One should only disable for debugging purpose or advanced use cases. "
         ),
     )
     # Output configuration
@@ -449,10 +452,7 @@ class TaskInput(BaseModel):
     )
     upscale_config: UpscaleConfig | None = Field(
         default=None,
-        description=(
-            "Engine and tuning knobs for UPSCALE and IMAGE_UPSCALE. Required "
-            "for IMAGE_UPSCALE, which reads its factor from here."
-        ),
+        description=("Engine and tuning knobs for UPSCALE."),
     )
     seed: int | None = Field(
         default=None,
@@ -475,23 +475,14 @@ class TaskInput(BaseModel):
         default=None,
         description=(
             "Source / reference image URLs. "
-            "Only needed for tasks that require input images like I2I, I2V, R2V. "
-            "Refer to the API docs for concrete examples of how to use this and what inputs are allowed. "
-            "For I2V, entry 0 is the start frame and an optional entry 1 is the "
-            "end frame on surfaces that declare end-frame support; a second "
-            "image returns 400 elsewhere. "
+            "For I2V, entry 0 is the start frame and an optional entry 1 is the end frame. "
+            "For R2V, these are used as references, and `subject_to_image_ids` must be used "
+            "if any @ handles are used in the prompt as references to the subjects. "
+            "Public image URLs or base64 encoded data URLs can be used. "
         ),
     )
     src_video_urls: list[str] | None = Field(
-        default=None,
-        description=(
-            "Reference video URLs for R2V surfaces that declare video-reference "
-            "support. Limits are model-specific and enforced by the synced "
-            "capability contract. Order is meaningful where the surface edits a "
-            "clip rather than generating a new one: entry 0 is the clip being "
-            "edited and its length sets the output's, while the rest only "
-            "inform the result."
-        ),
+        default=None, description=("Reference video URLs. Public http(s) URLs only. ")
     )
     src_audio_urls: list[str] | None = Field(
         default=None,
@@ -499,6 +490,15 @@ class TaskInput(BaseModel):
             "Reference audio URLs for R2V surfaces that declare audio-reference "
             "support. Limits and whether audio may be sent alone are "
             "model-specific and enforced by the synced capability contract."
+        ),
+    )
+    src_task_ids: list[str] | None = Field(
+        default=None,
+        description=(
+            "The output artifact (video or image) generated from the upstream task(s) "
+            "will be used as the input together with its input unless overridden in this task. "
+            "For most tasks (UPSCALE etc.), this should be a singleton list only. "
+            "Invalid input will be rejected. "
         ),
     )
     src_file_urls: list[str] | None = Field(

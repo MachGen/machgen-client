@@ -159,8 +159,8 @@ class TaskStatusResponse(GenerateResponse):
     execution_provider: str | None = Field(
         default=None,
         description=(
-            'Actual provider of the execution - "machgen" whenever any stage of '
-            "the task ran on MachGen GPUs, otherwise the vendor that ran it."
+            'Who ran the execution - "machgen" whenever any stage of the task '
+            'ran on MachGen GPUs, otherwise "partner".'
         ),
     )
     overflow_converted: bool = Field(

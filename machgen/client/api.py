@@ -59,7 +59,8 @@ class VideoConfig(BaseModel):
         default=None,
         description=(
             "Encode quality for the delivered video: 'standard' or 'high'. "
-            "**Only supported for Seedance-2.0.** Omitted -> the vendor default."
+            "Supported for Seedance-2.0 and Seedance-2.0-Fast. "
+            "Omitted -> the vendor default."
         ),
     )
     infer_steps: int | None = Field(
@@ -461,12 +462,10 @@ class TaskInput(BaseModel):
     optimization_level: str | None = Field(
         default=None,
         description=(
-            "Speed/quality trade-off tier: 'HIGH' or 'LOW'. 'HIGH' applies "
-            "more aggressive inference optimizations for lower latency at "
-            "some quality cost; 'LOW' stays closest to the unoptimized "
-            "output. This is a best-effort match: if the model does not "
-            "support the requested level the model default is used. Omitted "
-            "means the model default."
+            "Speed/quality trade-off tier: 'STANDARD/FAST/EXPRESS'. "
+            "Higher optimization level means more aggressive optimizations, "
+            "while lower level means more quality details. When not set, "
+            "default levels are automatically applied."
         ),
     )
 
@@ -544,14 +543,14 @@ class TaskInput(BaseModel):
         default=None,
         description=(
             "R2V only: subject_to_image_ids for src_video_urls. A name may "
-            "appear in only one of the three subject maps. Seedance-2.0 only."
+            "appear in only one of the three subject maps. Seedance 2.0 family only."
         ),
     )
     subject_to_audio_ids: dict[str, list[int]] | None = Field(
         default=None,
         description=(
             "R2V only: subject_to_image_ids for src_audio_urls. A name may "
-            "appear in only one of the three subject maps. Seedance-2.0 only."
+            "appear in only one of the three subject maps. Seedance 2.0 family only."
         ),
     )
     reference_order: list[ReferenceOrderItem] | None = Field(

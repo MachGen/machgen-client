@@ -27,6 +27,7 @@ from machgen.client._models import (
     UploadResponse,
 )
 from machgen.client.api import TaskInput
+from machgen.client.live import LiveClient
 from machgen.client.task_handle import (
     TaskHandle,
     UpdateCallback,
@@ -203,6 +204,7 @@ class MachGenClient:
         # so finished handles drop out automatically once their state is GC'd.
         self._active_states: weakref.WeakSet[_StreamState] = weakref.WeakSet()
         self._states_lock = threading.Lock()
+        self.live = LiveClient(self._http, self._check_open)
 
     @property
     def sse_retry(self) -> SseRetryConfig:

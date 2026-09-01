@@ -347,9 +347,12 @@ class AudioConfig(BaseModel):
     output_format: str | None = Field(
         default=None,
         description=(
-            "All audio surfaces: codec_samplerate_bitrate, e.g. 'mp3_44100_128'. "
-            "Only mp3 variants are accepted - generated audio is stored as .mp3. "
-            "Omitted uses mp3_44100_128."
+            "T2S, T2D and T2SFX: `mp3_22050_32`, `mp3_24000_48`, "
+            "`mp3_44100_32`, `mp3_44100_64`, `mp3_44100_96`, `mp3_44100_128`, "
+            "`mp3_44100_192`, `opus_48000_32`, `opus_48000_64`, `opus_48000_96`, "
+            "`opus_48000_128`, `opus_48000_192`. T2M also allows `mp3_48000_128`, "
+            "`mp3_48000_192`, `mp3_48000_240` and `mp3_48000_320`. mp3 is stored "
+            "as `.mp3`, opus as `.ogg`. Omitted uses `mp3_44100_128`."
         ),
     )
     apply_text_normalization: str | None = Field(

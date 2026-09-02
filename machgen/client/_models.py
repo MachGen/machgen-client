@@ -194,3 +194,20 @@ class UploadResponse(BaseModel):
             "the source container. Video uploads only."
         ),
     )
+
+
+class AccountResponse(BaseModel):
+    model_config = _WIRE_MODEL_CONFIG
+
+    account_id: str = Field(description="ID of this account")
+    balance_micros: int = Field(description="Balance of this account (in microdollars)")
+    autoreload_enabled: bool = Field(
+        default=False, description="If auto-reload is enabled on this account"
+    )
+    pending_tasks: int | None = Field(
+        default=None,
+        description="Current number of scheduled but not running tasks under this account",
+    )
+    running_tasks: int | None = Field(
+        default=None, description="Current number of running tasks under this account"
+    )

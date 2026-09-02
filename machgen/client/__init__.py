@@ -1,4 +1,5 @@
 from machgen.client._models import (
+    AccountResponse,
     GenerateResponse,
     ModerationResult,
     ModerationStage,
@@ -36,6 +37,7 @@ from machgen.client.live import (
 from machgen.client.task_handle import TaskHandle
 
 __all__ = [
+    "AccountResponse",
     "AudioConfig",
     "CompositionPlan",
     "DialogueTurn",

@@ -22,6 +22,7 @@ import httpx
 
 from machgen.client import _sse_executor
 from machgen.client._models import (
+    AccountResponse,
     GenerateResponse,
     TaskStatusResponse,
     UploadResponse,
@@ -374,12 +375,18 @@ class MachGenClient:
                     task.task_type in {"UPSCALE", "R2V"} and field == "src_video_urls"
                 )
                 updates[field] = [
-                    self._resolve_source_ref(ref, allow_direct_video=allow_direct_video)
+                    self._resolve_source_ref(
+                        ref,
+                        allow_direct_video=allow_direct_video,
+                        model=task.model,
+                    )
                     for ref in refs
                 ]
         return task.model_copy(update=updates) if updates else task
 
-    def _resolve_source_ref(self, ref: str, *, allow_direct_video: bool) -> str:
+    def _resolve_source_ref(
+        self, ref: str, *, allow_direct_video: bool, model: str
+    ) -> str:
         if _is_http_url(ref):
             return ref
         if ref.startswith("data:"):
@@ -392,9 +399,13 @@ class MachGenClient:
                 f"Source path does not exist: {str(path.absolute())}. Provide a path to a "
                 "local file, a public http(s):// URL, or an inline data: URL."
             )
-        return self._upload_local_file(path, allow_direct_video=allow_direct_video)
+        return self._upload_local_file(
+            path, allow_direct_video=allow_direct_video, model=model
+        )
 
-    def _upload_local_file(self, path: Path, *, allow_direct_video: bool) -> str:
+    def _upload_local_file(
+        self, path: Path, *, allow_direct_video: bool, model: str
+    ) -> str:
         logging.info(f"Uploading input {path}")
         content_type, _ = mimetypes.guess_type(path.name)
         if path.stat().st_size > _LEGACY_UPLOAD_MAX_BYTES:
@@ -403,9 +414,12 @@ class MachGenClient:
                     "This local file is above the 32 MiB request-body limit and "
                     "the selected input does not support direct video upload"
                 )
-            return self._upload_direct_video(path, content_type or "video/mp4")
+            return self._upload_direct_video(
+                path, content_type or "video/mp4", model=model
+            )
         resp = self._http.post(
             "/api/v0/upload",
+            headers={"X-MachGen-Upload-Model": model},
             files={
                 "file": (
                     path.name,
@@ -446,7 +460,7 @@ class MachGenClient:
         response.raise_for_status()
         raise RuntimeError("Unexpected resumable upload status")
 
-    def _upload_direct_video(self, path: Path, content_type: str) -> str:
+    def _upload_direct_video(self, path: Path, content_type: str, *, model: str) -> str:
         size_bytes = path.stat().st_size
         initiated = self._http.post(
             "/api/v0/uploads/direct/initiate",
@@ -505,6 +519,7 @@ class MachGenClient:
                     raise last_error
         completed = self._http.post(
             "/api/v0/uploads/direct/complete",
+            headers={"X-MachGen-Upload-Model": model},
             json={"upload_token": session["upload_token"]},
         )
         completed.raise_for_status()
@@ -550,3 +565,15 @@ class MachGenClient:
         resp = self._http.get(f"/api/v0/assets/{task_id}")
         resp.raise_for_status()
         return resp.content
+
+    def get_account(self) -> AccountResponse:
+        """
+        Get the account's current state, like balances, or current live tasks aggregations.
+
+        Returns:
+            Account state.
+        """
+        self._check_open()
+        resp = self._http.get("/api/v0/billing/account")
+        resp.raise_for_status()
+        return AccountResponse.model_validate(resp.json())

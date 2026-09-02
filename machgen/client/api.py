@@ -483,6 +483,17 @@ class TaskInput(BaseModel):
             "Public image URLs or base64 encoded data URLs can be used. "
         ),
     )
+    keyframe_indices: list[Literal[0, -1]] | None = Field(
+        default=None,
+        description=(
+            "I2V only: where each src_image_urls entry sits in the output, "
+            "aligned 1:1 with that list. 0 is the first frame and -1 the last "
+            "frame, so [0], [0, -1] and [-1] are the accepted values. Omitted "
+            "keeps the positional reading (entry 0 first, entry 1 last). "
+            "[-1] alone animates towards a single end frame and is honored only "
+            "by models that declare it (MiniMax-H3)."
+        ),
+    )
     src_video_urls: list[str] | None = Field(
         default=None, description=("Reference video URLs. Public http(s) URLs only. ")
     )
@@ -529,6 +540,17 @@ class TaskInput(BaseModel):
             "length, and 'extend' continues it with a requested output length. "
             "The primary clip is src_video_urls[0]. Omitted preserves legacy "
             "provider-classified behavior."
+        ),
+    )
+    reference_video_start_secs: list[float] | None = Field(
+        default=None,
+        description=(
+            "R2V only: where each reference video starts being read, in seconds "
+            "from the beginning of the clip, aligned 1:1 with src_video_urls as "
+            "it stands after src_task_ids routing. Each value is >= 0 and must "
+            "fall inside the clip; the remaining length is what the model sees "
+            "and what is billed. Omitted reads every clip from 0. A non-zero "
+            "start is honored only by models that declare it (MiniMax-H3)."
         ),
     )
 

@@ -418,12 +418,13 @@ class TaskInput(BaseModel):
     model_config = _WIRE_MODEL_CONFIG
 
     # What to generate
-    model: str = Field(description="Model id, e.g. 'Wan2.2-A14B', 'Kling-v3'.")
+    model: str = Field(description="Model id, e.g. 'MiniMax-H3', 'Kling-v3'.")
     task_type: str = Field(
         description=(
-            "one of T2I, I2I (image), T2V, I2V, R2V, F2F (video), UPSCALE "
-            "(image or video, following the model's upscale surface), "
-            "T2S, T2D, T2SFX, T2M (audio)"
+            "one of:\n"
+            "**T2I**, **I2I** (image), **T2V**, **I2V**, **R2V** (video), "
+            "**UPSCALE** (image or video based on input type), "
+            "**T2S**, **T2D**, **T2SFX**, **T2M** (audio)"
         )
     )
 
@@ -442,6 +443,17 @@ class TaskInput(BaseModel):
             "For new generation of models (LTX, MiniMax-H3 and beyond), "
             "turning off prompt enhancement would severely degrade quality. "
             "One should only disable for debugging purpose or advanced use cases. "
+        ),
+    )
+    prompt_enhancer: str | None = Field(
+        default=None,
+        description=(
+            "What prompt enhancer to use.\n"
+            "Options are: default, native. If not specified, the default will be used.\n\n"
+            "**default**: use MachGen fine-tuned prompt enhancer for faster, quality output\n"
+            "**native**: the original enhancer paired with the model "
+            "(This is slower and should only be used if the default one shows issues.)\n\n"
+            "If the model does not have one, this option will fallback to the default."
         ),
     )
     # Output configuration

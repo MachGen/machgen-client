@@ -484,6 +484,20 @@ class TaskInput(BaseModel):
         ),
     )
 
+    adapter: str | None = Field(
+        default=None,
+        description=(
+            "LoRA selector for the model, if supported. "
+            "Omit to use the model's default.\n\n"
+            "Currently supported on `MiniMax-H3-MultiMax` (T2V, I2V, R2V):\n"
+            "`larryvrh_v4_step600_ema` - 6 steps.\n"
+            "`lightx2v_fl2v_8step_v10_native` - 8 steps.\n"
+            "`silveroxides_dareties_fro099_v2` - 6 steps.\n"
+            "`plaguekind_parasyte_turbo` - 6 steps.\n"
+            "`silveroxides_4to8_dareties_v2` - 6 steps."
+        ),
+    )
+
     # Source media (I2I, I2V, R2V)
     src_image_urls: list[str] | None = Field(
         default=None,

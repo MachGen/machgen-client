@@ -489,7 +489,7 @@ class TaskInput(BaseModel):
         description=(
             "LoRA selector for the model, if supported. "
             "Omit to use the model's default.\n\n"
-            "Currently supported on `MiniMax-H3-MultiMax` (T2V, I2V, R2V):\n"
+            "Currently supported on `MiniMax-H3-Turbo` (T2V, I2V, R2V):\n"
             "`larryvrh_v4_step600_ema` - 6 steps.\n"
             "`lightx2v_fl2v_8step_v10_native` - 8 steps.\n"
             "`silveroxides_dareties_fro099_v2` - 6 steps.\n"

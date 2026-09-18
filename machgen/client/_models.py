@@ -69,6 +69,9 @@ class TaskMetadata(BaseModel):
     acceleration: str | None = Field(
         default=None, description="Acceleration profile applied by the backend."
     )
+    adapter: str | None = Field(
+        default=None, description="LoRA selector the task was submitted with."
+    )
 
 
 class TaskOutputType(StrEnum):

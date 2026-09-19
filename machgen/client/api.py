@@ -289,6 +289,56 @@ class UpscaleConfig(BaseModel):
     )
 
 
+class TrainConfig(BaseModel):
+    """Trainer settings for the TRAINING task type.
+
+    Kept off the media configs the way ``UpscaleConfig`` is: a training request
+    carries no prompt and no output geometry. Allowed ranges come from the
+    model's capability grid and are checked at admission.
+    """
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    dataset: str = Field(
+        description=(
+            "The dataset archive to train on, as the @input/<artifact_path> "
+            "reference returned by the upload endpoint for a .zip file."
+        )
+    )
+    steps: int = Field(description="Number of optimizer steps to train for.")
+    learning_rate: float = Field(description="Optimizer learning rate.")
+    rank: int | None = Field(
+        default=None,
+        description="LoRA rank. LORA mode only; omit to use the model default.",
+    )
+    alpha: float | None = Field(
+        default=None,
+        description="LoRA alpha scaling. LORA mode only; omit to use the model default.",
+    )
+    trigger_word: str | None = Field(
+        default=None,
+        description="Token prepended to every training prompt, and later to prompts that should use the adapter.",
+    )
+    eval_ratio: float | None = Field(
+        default=None,
+        description=(
+            "Fraction of the dataset (0 to 1, exclusive) held out to report a "
+            "validation loss during training. Omit or 0 to train on every sample."
+        ),
+    )
+    default_caption: str | None = Field(
+        default=None,
+        description="Instruction used for samples that carry no caption of their own.",
+    )
+    checkpoint_name: str | None = Field(
+        default=None,
+        description=(
+            "Name for the resulting adapter, shared across your account. Omit to get "
+            "`<user_id>/<task_id>`. Letters, digits, `.`, `_` and `-`, up to 64 characters."
+        ),
+    )
+
+
 class AudioConfig(BaseModel):
     """Output configuration for the audio task types.
 
@@ -469,6 +519,16 @@ class TaskInput(BaseModel):
     upscale_config: UpscaleConfig | None = Field(
         default=None,
         description=("Engine and tuning knobs for UPSCALE."),
+    )
+    mode: str | None = Field(
+        default=None,
+        description=(
+            "TRAINING only: what to produce. 'LORA' trains an adapter over the "
+            "frozen base model; 'FULL_MODEL' tunes every weight."
+        ),
+    )
+    train_config: TrainConfig | None = Field(
+        default=None, description="Required for the TRAINING task type."
     )
     seed: int | None = Field(
         default=None,

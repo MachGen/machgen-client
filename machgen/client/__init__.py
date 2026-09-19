@@ -5,6 +5,7 @@ from machgen.client._models import (
     ModerationStage,
     TaskMetadata,
     TaskOutputType,
+    TaskProgress,
     TaskStatusResponse,
     UploadResponse,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "TaskMetadata",
     "TaskOutputType",
     "TaskStatus",
+    "TaskProgress",
     "TaskStatusResponse",
     "TaskUpdate",
     "UploadResponse",

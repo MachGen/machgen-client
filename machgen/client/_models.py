@@ -129,6 +129,18 @@ class GenerateResponse(BaseModel):
     )
 
 
+class TaskProgress(BaseModel):
+    """Where a long-running task is, for task types that report it (TRAINING)."""
+
+    model_config = _WIRE_MODEL_CONFIG
+
+    step: int = Field(description="Steps completed so far.")
+    total_steps: int = Field(description="Steps the task will run in total.")
+    elapsed_secs: float | None = Field(
+        default=None, description="Seconds spent training so far."
+    )
+
+
 class TaskStatusResponse(GenerateResponse):
     status: TaskStatus = Field(description="Current task status.")
     error_msg: str | None = Field(
@@ -171,6 +183,13 @@ class TaskStatusResponse(GenerateResponse):
         description=(
             "Whether long queuing moved this task off self-hosted capacity to "
             "an on-demand provider. Readable before the task finishes."
+        ),
+    )
+    progress: TaskProgress | None = Field(
+        default=None,
+        description=(
+            "Step progress while a TRAINING task is RUNNING; unset for task "
+            "types that do not report it."
         ),
     )
 

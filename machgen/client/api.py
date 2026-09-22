@@ -309,7 +309,8 @@ class TrainConfig(BaseModel):
     learning_rate: float = Field(description="Optimizer learning rate.")
     rank: int | None = Field(
         default=None,
-        description="LoRA rank. LORA mode only; omit to use the model default.",
+        le=64,
+        description="LoRA rank. LORA mode only. Default is 16 if not set. Support up to 64.",
     )
     alpha: float | None = Field(
         default=None,
@@ -554,7 +555,8 @@ class TaskInput(BaseModel):
             "`lightx2v_fl2v_8step_v10_native` - 8 steps.\n"
             "`silveroxides_dareties_fro099_v2` - 6 steps.\n"
             "`plaguekind_parasyte_turbo` - 6 steps.\n"
-            "`silveroxides_4to8_dareties_v2` - 6 steps."
+            "`silveroxides_4to8_dareties_v2` - 6 steps.\n"
+            "`hyperflow` - 8 steps."
         ),
     )
 

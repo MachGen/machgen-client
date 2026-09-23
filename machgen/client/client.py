@@ -38,7 +38,7 @@ from machgen.client.task_handle import (
 
 _DEFAULT_BASE_URL = "https://api.machgen.ai"
 _DEFAULT_TIMEOUT_SECS = 60.0
-_LEGACY_UPLOAD_MAX_BYTES = 32 * 1024 * 1024
+_LEGACY_UPLOAD_MAX_BYTES = 50 * 1024 * 1024
 
 # A source ref is a public http(s):// URL or an inline data: URL - both
 # forwarded untouched - or a local filesystem path, which is uploaded to the
@@ -411,7 +411,7 @@ class MachGenClient:
         if path.stat().st_size > _LEGACY_UPLOAD_MAX_BYTES:
             if not allow_direct_video or not (content_type or "").startswith("video/"):
                 raise ValueError(
-                    "This local file is above the 32 MiB request-body limit and "
+                    "This local file is above the 50 MiB request-body limit and "
                     "the selected input does not support direct video upload"
                 )
             return self._upload_direct_video(

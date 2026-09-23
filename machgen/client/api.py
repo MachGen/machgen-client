@@ -475,6 +475,7 @@ class TaskInput(BaseModel):
             "one of:\n"
             "**T2I**, **I2I** (image), **T2V**, **I2V**, **R2V** (video), "
             "**UPSCALE** (image or video based on input type), "
+            "**SHARPEN** (video), "
             "**T2S**, **T2D**, **T2SFX**, **T2M** (audio)"
         )
     )

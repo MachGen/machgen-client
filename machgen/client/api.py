@@ -81,6 +81,9 @@ class VideoConfig(BaseModel):
             "In those cases this field has no effect."
         ),
     )
+    sharpen: bool = Field(
+        default=False, description="Sharpens MiniMax-H3 480p/768p/2K videos"
+    )
     guidance_scale: list[float] | None = Field(
         default=None,
         description=(
@@ -341,14 +344,25 @@ class TrainConfig(BaseModel):
 
 
 class AudioConfig(BaseModel):
-    """Output configuration for the audio task types.
+    """Configuration for audio generation.
 
-    Every field is read by exactly one surface, named in its description. The
-    free-text intent always rides on ``TaskInput.prompt`` - except T2D, whose
-    text lives only in ``turns``.
+    Supported fields and defaults depend on the selected model and task type.
+    Provide text or generation instructions in ``TaskInput.prompt``. For YuE2,
+    use the prompt for musical style and ``lyrics`` for the words to sing.
+    For T2D, provide spoken text in ``turns`` instead of the prompt.
     """
 
     model_config = _WIRE_MODEL_CONFIG
+
+    lyrics: str | None = Field(
+        default=None,
+        description=(
+            "T2M models that accept separate lyrics: the words to sing, with "
+            "section labels such as [Verse] and [Chorus]. Required for YuE2; "
+            "provide the musical style in TaskInput.prompt. Omit for models "
+            "that do not support separate lyrics."
+        ),
+    )
 
     voice_id: str | None = Field(
         default=None,
@@ -363,7 +377,12 @@ class AudioConfig(BaseModel):
     )
     duration_secs: float | None = Field(
         default=None,
-        description="T2SFX and T2M: length of the generated audio in seconds.",
+        description=(
+            "T2SFX and T2M models that support a requested duration: target audio "
+            "length in seconds. Accepted ranges and defaults depend on the model. "
+            "Omit for YuE2, which generates variable-length audio and does not "
+            "accept a requested duration."
+        ),
     )
     stability: float | None = Field(
         default=None,
@@ -398,12 +417,16 @@ class AudioConfig(BaseModel):
     output_format: str | None = Field(
         default=None,
         description=(
-            "T2S, T2D and T2SFX: `mp3_22050_32`, `mp3_24000_48`, "
-            "`mp3_44100_32`, `mp3_44100_64`, `mp3_44100_96`, `mp3_44100_128`, "
-            "`mp3_44100_192`, `opus_48000_32`, `opus_48000_64`, `opus_48000_96`, "
-            "`opus_48000_128`, `opus_48000_192`. T2M also allows `mp3_48000_128`, "
-            "`mp3_48000_192`, `mp3_48000_240` and `mp3_48000_320`. mp3 is stored "
-            "as `.mp3`, opus as `.ogg`. Omitted uses `mp3_44100_128`."
+            "Audio encoding; supported values and defaults depend on the model. "
+            "YuE2 supports only `flac`, which is also its default, and produces "
+            "a `.flac` file. ElevenLabs T2S, T2D and T2SFX support "
+            "`mp3_22050_32`, `mp3_24000_48`, `mp3_44100_32`, `mp3_44100_64`, "
+            "`mp3_44100_96`, `mp3_44100_128`, `mp3_44100_192`, "
+            "`opus_48000_32`, `opus_48000_64`, `opus_48000_96`, "
+            "`opus_48000_128` and `opus_48000_192`. ElevenLabs T2M also supports "
+            "`mp3_48000_128`, `mp3_48000_192`, `mp3_48000_240` and "
+            "`mp3_48000_320`. ElevenLabs defaults to `mp3_44100_128`. "
+            "MP3 is stored as `.mp3` and Opus as `.ogg`."
         ),
     )
     apply_text_normalization: str | None = Field(

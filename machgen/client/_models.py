@@ -72,6 +72,10 @@ class TaskMetadata(BaseModel):
     adapter: str | None = Field(
         default=None, description="LoRA selector the task was submitted with."
     )
+    draft: bool | None = Field(
+        default=None,
+        description="True when the output is a Seedance 2.5 480p draft video.",
+    )
 
 
 class TaskOutputType(StrEnum):

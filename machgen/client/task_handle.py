@@ -135,10 +135,10 @@ class TaskHandle:
     @property
     def state(self) -> TaskStatusResponse | None:
         """
-        Fetches the latest state of the handle.
+        Read the final response received by the SSE stream without a request.
 
         Returns:
-            the current task state, or None if there's no state from server yet
+            the terminal task response, or None until the stream receives one
         """
         return self._state.terminal_resp
 

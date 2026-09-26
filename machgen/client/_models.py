@@ -76,6 +76,10 @@ class TaskMetadata(BaseModel):
         default=None,
         description="True when the output is a Seedance 2.5 480p draft video.",
     )
+    draft_source_task_id: str | None = Field(
+        default=None,
+        description="MachGen id of the Seedance 2.5 draft this final video was rendered from.",
+    )
 
 
 class TaskOutputType(StrEnum):

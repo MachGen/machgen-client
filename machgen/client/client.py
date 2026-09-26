@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import base64
 import logging
-import math
 import mimetypes
 import os
 import re
@@ -28,7 +27,6 @@ from machgen.client._models import (
     UploadResponse,
 )
 from machgen.client.api import TaskInput
-from machgen.client.live import LiveClient
 from machgen.client.task_handle import (
     TaskHandle,
     UpdateCallback,
@@ -118,58 +116,49 @@ class SseRetryConfig:
 
 class MachGenClient:
     """
-    Public client to interact with MachGen API service.
+    Submit tasks and receive results from the MachGen API.
 
-    The client currently supports:
-        - Image generation
-            - T2I (Text to Image)
-            - I2I (Image Editing)
-        - Video generation
-            - T2V (Text to Video)
-            - I2V (Image to Video)
-            - R2V (Reference to Video)
-        - Free clip extraction from a completed owned video
+    Supported tasks depend on the selected model and include:
+        - Image generation and editing: T2I, I2I
+        - Video generation: T2V, I2V, R2V
+        - Audio generation: T2S, T2D, T2SFX, T2M
+        - Image or video upscaling: UPSCALE
 
-    The client uses a polling model. The caller can submit a video or image task.
+    `submit_task` returns a TaskHandle without waiting for completion.
+    Track the task through polling or server-sent events (SSE):
+        - `client.get_task_state(handle)` fetches the current status once.
+          Call it repeatedly to poll.
+        - `submit_task(task, on_update=callback)` starts a background SSE
+          stream and calls the callback with each status update.
+        - `client.wait(handle, timeout=300.0)` starts or reuses the SSE stream
+          and blocks until COMPLETED or FAILED, or raises TimeoutError.
 
-    The submission call does not block waiting for the task to complete.
-    It returns a handle to be used for state polling.
+    `handle.state` reads the final streamed response without a network request.
+    It is None until the stream receives a terminal status. Polling alone does
+    not start a stream or update `handle.state`.
 
-    A caller is expected to call one of
-        - `client.get_task_state(handle)`
-        - `handle.state`
-        - `client.wait(handle)` (blocking)
-    to get the state/wait for completion of the task.
+    ```python
+    from machgen.client import MachGenClient, TaskInput, TaskStatus, VideoConfig
 
-    ```
     task = TaskInput(
         prompt="A quick brown fox jumps over the lazy dog.",
-        model="Wan2.2-A14B",
+        model="MiniMax-H3",
         task_type="T2V",
         video_config=VideoConfig(
-            fps=16,
-            height=480,
+            fps=24,
+            height=768,
             aspect_ratio="16:9",
             duration_secs=5,
         ),
     )
 
     with MachGenClient() as client:
-        handle = client.submit_task(task)
+        handle = client.submit_task(task, on_update=lambda state: print(state.status))
+        result = client.wait(handle)
+        if result.status == TaskStatus.FAILED:
+            raise RuntimeError(result.error_msg)
 
-        # optionally, add a callback to suscribe to updates
-        # handle = client.submit_task(task, on_update=lambda status: ...)
-
-        result = client.get_task_state(handle)
-        while result.status != TaskStatus.COMPLETED:
-            time.sleep(1)
-            result = client.get_task_state(handle)
-
-        # alternatively use a blocking wait:
-        # result = client.wait(handle)
-        assert result.status == TaskStatus.COMPLETED
-
-        with open(output_path, "wb") as f:
+        with open("output.mp4", "wb") as f:
             f.write(client.download_asset(handle.task_id))
     ```
     """
@@ -205,7 +194,6 @@ class MachGenClient:
         # so finished handles drop out automatically once their state is GC'd.
         self._active_states: weakref.WeakSet[_StreamState] = weakref.WeakSet()
         self._states_lock = threading.Lock()
-        self.live = LiveClient(self._http, self._check_open)
 
     @property
     def sse_retry(self) -> SseRetryConfig:
@@ -310,49 +298,6 @@ class MachGenClient:
         resp = self._http.post(
             "/api/v0/generate",
             json=task.model_dump(mode="json", exclude_none=True),
-        )
-        resp.raise_for_status()
-        body = GenerateResponse.model_validate(resp.json())
-        return TaskHandle(body.task_id, self, on_update=on_update)
-
-    def extract_video_clip(
-        self,
-        source_task_id: str,
-        start_secs: float,
-        end_secs: float,
-        *,
-        on_update: UpdateCallback | None = None,
-    ) -> TaskHandle:
-        """Save part of an owned generated video as a new video asset.
-
-        The operation preserves the source audio and uses the free
-        ``EXTRACT_VIDEO_CLIP`` post-processing task rather than paid generation.
-        ``start_secs`` is inclusive and ``end_secs`` is the exclusive endpoint.
-        The server validates the range against the owned source's duration.
-        """
-        self._check_open()
-        task_id = source_task_id.strip()
-        if (
-            not task_id
-            or len(task_id) > 200
-            or any(separator in task_id for separator in ("/", "\\", "?", "#"))
-        ):
-            raise ValueError("source_task_id must be a valid generated task id")
-        if not math.isfinite(start_secs) or start_secs < 0:
-            raise ValueError("start_secs must be a non-negative number")
-        if not math.isfinite(end_secs) or end_secs <= start_secs:
-            raise ValueError("end_secs must be greater than start_secs")
-
-        resp = self._http.post(
-            "/api/v0/generate",
-            json={
-                "prompt": f"Clip {start_secs:g}s to {end_secs:g}s",
-                "model": "NO_MODEL",
-                "task_type": "EXTRACT_VIDEO_CLIP",
-                "src_video_urls": [f"/api/v0/assets/{task_id}"],
-                "clip_start_secs": start_secs,
-                "clip_end_secs": end_secs,
-            },
         )
         resp.raise_for_status()
         body = GenerateResponse.model_validate(resp.json())
@@ -548,9 +493,8 @@ class MachGenClient:
         """
         Get the task's current state.
 
-        This is similar to `handle.state` except that it eagerly fetches the state from server,
-        and raises exception if the state is not available yet,
-        as opposed to waiting for server polling.
+        Fetches the current status from the server in one request. Does not
+        start an SSE stream or update `handle.state`.
 
         Returns:
             the current task state

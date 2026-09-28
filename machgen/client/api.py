@@ -520,6 +520,9 @@ class TaskInput(BaseModel):
             "One should only disable for debugging purpose or advanced use cases. "
         ),
     )
+    prompt_enhancement_level: Literal["DEFAULT", "FAST", "BALANCED", "DEEP"] | None = (
+        None
+    )
     prompt_enhancer: str | None = Field(
         default=None,
         description=(
@@ -701,4 +704,17 @@ class TaskInput(BaseModel):
     moderate: bool = Field(
         default=True,
         description="Whether this request is screened by content moderation.",
+    )
+
+    # Delivery
+    webhook_url: str | None = Field(
+        default=None,
+        description=(
+            "Async generate only: https URL on a public host that receives the "
+            "task's final status as one POST, using the same JSON as GET /tasks/{id} "
+            "with the task id in the X-Task-Id header. Fires on every terminal state, "
+            "including failure. Delivery is best-effort if the endpoint returns "
+            "errors (non-2xx HTTP code). Redirects and "
+            "private addresses are not followed."
+        ),
     )

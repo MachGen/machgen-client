@@ -33,6 +33,7 @@ class TaskMetadata(BaseModel):
     model_config = _WIRE_MODEL_CONFIG
 
     prompt: str = Field(description="Prompt the task was submitted with.")
+    prompt_enhancement_level: str | None = None
     model: str | None = Field(default=None, description="Resolved model id.")
     task_type: str | None = Field(default=None, description="Resolved task type.")
     seed: int | None = Field(default=None, description="Seed used for generation.")

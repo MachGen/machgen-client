@@ -715,6 +715,7 @@ class TaskInput(BaseModel):
             "with the task id in the X-Task-Id header. Fires on every terminal state, "
             "including failure. Delivery is best-effort if the endpoint returns "
             "errors (non-2xx HTTP code). Redirects and "
-            "private addresses are not followed."
+            "private addresses are not followed. Delivery status for each "
+            "webhook is shown under Webhooks on your profile page."
         ),
     )

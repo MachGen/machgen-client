@@ -7,6 +7,7 @@ read from the ``MACHGEN_API_KEY`` environment variable.
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import mimetypes
 import os
@@ -405,20 +406,10 @@ class MachGenClient:
         response.raise_for_status()
         raise RuntimeError("Unexpected resumable upload status")
 
-    def _upload_direct_video(self, path: Path, content_type: str, *, model: str) -> str:
+    def _upload_resumable(
+        self, path: Path, upload_url: str, chunk_size: int, content_type: str
+    ) -> None:
         size_bytes = path.stat().st_size
-        initiated = self._http.post(
-            "/api/v0/uploads/direct/initiate",
-            json={
-                "file_name": path.name,
-                "content_type": content_type,
-                "size_bytes": size_bytes,
-            },
-        )
-        initiated.raise_for_status()
-        session = initiated.json()
-        upload_url = str(session["upload_url"])
-        chunk_size = int(session["chunk_size"])
         offset = 0
         with path.open("rb") as source:
             while offset < size_bytes:
@@ -462,6 +453,25 @@ class MachGenClient:
                         end = offset + len(chunk)
                 if last_error is not None:
                     raise last_error
+
+    def _upload_direct_video(self, path: Path, content_type: str, *, model: str) -> str:
+        size_bytes = path.stat().st_size
+        initiated = self._http.post(
+            "/api/v0/uploads/direct/initiate",
+            json={
+                "file_name": path.name,
+                "content_type": content_type,
+                "size_bytes": size_bytes,
+            },
+        )
+        initiated.raise_for_status()
+        session = initiated.json()
+        self._upload_resumable(
+            path,
+            str(session["upload_url"]),
+            int(session["chunk_size"]),
+            content_type,
+        )
         completed = self._http.post(
             "/api/v0/uploads/direct/complete",
             headers={"X-MachGen-Upload-Model": model},
@@ -509,6 +519,44 @@ class MachGenClient:
         resp = self._http.get(f"/api/v0/assets/{task_id}")
         resp.raise_for_status()
         return resp.content
+
+    def upload_adapter(
+        self,
+        weights: str | Path,
+        adapter_config: dict,
+        inference_config: dict,
+        *,
+        model: str,
+    ) -> str:
+        self._check_open()
+        path = Path(weights)
+        md5 = hashlib.md5()
+        with path.open("rb") as source:
+            while chunk := source.read(8 * 1024 * 1024):
+                md5.update(chunk)
+        created = self._http.post(
+            "/api/v0/adapters",
+            params={"model": model},
+            json={
+                "size_bytes": path.stat().st_size,
+                "md5": md5.hexdigest(),
+                "adapter_config": adapter_config,
+                "inference_config": inference_config,
+            },
+        )
+        created.raise_for_status()
+        upload = created.json()
+        if upload["status"] != "ready":
+            if upload["upload_url"] is not None:
+                self._upload_resumable(
+                    path,
+                    upload["upload_url"],
+                    int(upload["chunk_size"]),
+                    "application/octet-stream",
+                )
+            committed = self._http.post(f"/api/v0/adapters/{upload['adapter']}/commit")
+            committed.raise_for_status()
+        return str(upload["adapter"])
 
     def get_account(self) -> AccountResponse:
         """

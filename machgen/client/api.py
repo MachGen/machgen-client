@@ -568,7 +568,9 @@ class TaskInput(BaseModel):
             "Speed/quality trade-off tier: 'STANDARD/FAST/EXPRESS'. "
             "Higher optimization level means more aggressive optimizations, "
             "while lower level means more quality details. When not set, "
-            "default levels are automatically applied."
+            "default levels are automatically applied.\n\n"
+            "For GPT Image 2 (T2I and I2I), 'STANDARD' uses high image quality "
+            "(default), and 'EXPRESS' uses low image quality."
         ),
     )
 

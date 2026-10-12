@@ -24,6 +24,7 @@ from machgen.client import _sse_executor
 from machgen.client._models import (
     AccountResponse,
     GenerateResponse,
+    TaskBillingResponse,
     TaskStatusResponse,
     UploadResponse,
 )
@@ -513,6 +514,22 @@ class MachGenClient:
         resp = self._http.get(f"/api/v0/tasks/{handle.task_id}")
         resp.raise_for_status()
         return TaskStatusResponse.model_validate(resp.json())
+
+    def get_task_billing(self, handle: TaskHandle) -> TaskBillingResponse:
+        """
+        Get what the task cost, once it has finished.
+
+        The cost is final only after the task is COMPLETED or FAILED. Asking
+        earlier raises `httpx.HTTPStatusError` with a 409 response; `wait` for
+        the task first.
+
+        Returns:
+            the task's cost, Generation Credit and net
+        """
+        self._check_open()
+        resp = self._http.get(f"/api/v0/tasks/{handle.task_id}/billing")
+        resp.raise_for_status()
+        return TaskBillingResponse.model_validate(resp.json())
 
     def download_asset(self, task_id: str) -> bytes:
         self._check_open()

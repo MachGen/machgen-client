@@ -51,7 +51,8 @@ also opens a stream when no callback is supplied. Set `timeout` on `wait` to
 limit how long it blocks (300 seconds by default).
 
 For manual polling, call `get_task_state(handle)` to fetch the current status
-once, then repeat as needed.
+once, then repeat as needed. Once the task has finished, `get_task_billing(handle)`
+returns what it cost.
 
 ## Documentation
 

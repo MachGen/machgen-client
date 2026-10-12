@@ -227,6 +227,21 @@ class UploadResponse(BaseModel):
     )
 
 
+class TaskBillingResponse(BaseModel):
+    model_config = _WIRE_MODEL_CONFIG
+
+    task_id: str = Field(description="ID of the task.")
+    generation_cost_micros: int = Field(
+        description="The cost for this generation (in microdollars).",
+    )
+    generation_credit_micros: int = Field(
+        description="The credit returned for this generation (in microdollars).",
+    )
+    net_cost_micros: int = Field(
+        description="Cost minus Generation Credit, in microdollars. The amount this task actually cost you.",
+    )
+
+
 class AccountResponse(BaseModel):
     model_config = _WIRE_MODEL_CONFIG
 

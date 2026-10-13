@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 _WIRE_MODEL_CONFIG = ConfigDict(extra="ignore", frozen=True)
 
@@ -23,12 +23,23 @@ class VideoConfig(BaseModel):
         default=None,
         description="Video frames per second. If omitted the default FPS would be used based on the model.",
     )
-    duration_secs: int = Field(
+    duration_secs: int | None = Field(
+        default=None,
         description=(
             "Video duration in seconds. Where a surface allows it, -1 asks the "
             "model to determine the length from the request, such as matching a "
             "reference clip or selecting a smart output duration. Allowed values "
-            "are enforced by the synced capability contract."
+            "are enforced by the synced capability contract. "
+            "Omit when num_frames is set."
+        ),
+    )
+    num_frames: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Video length as a frame count, an alternative to duration_secs. "
+            "Send exactly one of the two. The model renders the nearest frame "
+            "count it supports, and the response returns the count used."
         ),
     )
     height: int | None = Field(
@@ -153,6 +164,12 @@ class VideoConfig(BaseModel):
         if isinstance(v, (int, float)) and not isinstance(v, bool):
             return [float(v)]
         return v
+
+    @model_validator(mode="after")
+    def _one_length(self) -> VideoConfig:
+        if (self.duration_secs is None) == (self.num_frames is None):
+            raise ValueError("set exactly one of duration_secs and num_frames")
+        return self
 
 
 class ImageConfig(BaseModel):

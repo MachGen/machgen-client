@@ -52,6 +52,10 @@ class TaskMetadata(BaseModel):
             "fractional durations (e.g. a 0.5s sound effect)."
         ),
     )
+    num_frames: int | None = Field(
+        default=None,
+        description="Frame count rendered when the task was requested with num_frames.",
+    )
     src_image_urls: list[str] | None = Field(
         default=None, description="Source / reference image refs."
     )

@@ -59,6 +59,9 @@ class TaskMetadata(BaseModel):
     src_image_urls: list[str] | None = Field(
         default=None, description="Source / reference image refs."
     )
+    input_video_secs: float | None = Field(
+        default=None, description="Total reference-video seconds used for billing."
+    )
     src_video_urls: list[str] | None = Field(
         default=None, description="Source / reference video refs."
     )

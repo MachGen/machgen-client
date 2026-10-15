@@ -416,7 +416,8 @@ class AudioConfig(BaseModel):
     similarity_boost: float | None = Field(
         default=None,
         description=(
-            "T2S only: 0-1. How closely the output tracks the original voice. "
+            "T2S and T2D models that support similarity: 0-1. How closely the "
+            "output tracks the original voice. "
             "Omitted uses the model default."
         ),
     )
